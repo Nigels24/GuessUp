@@ -51,7 +51,8 @@ async function main(): Promise<void> {
   }
   console.log(`  categories: ${categoryIdBySlug.size}`);
 
-  // 2. Questions (matched on category + question text so re-runs update in place)
+  // 2. Questions (upsert on seedKey: some question texts repeat on purpose
+  //    inside a category, so the text cannot identify an item)
   let created = 0;
   let updated = 0;
   for (const question of questions) {
@@ -74,18 +75,17 @@ async function main(): Promise<void> {
       isActive: true,
     };
 
-    const existing = await prisma.question.findFirst({
-      where: { categoryId, questionText: question.questionText },
+    const existing = await prisma.question.findUnique({
+      where: { seedKey: question.seedKey },
       select: { id: true },
     });
-
-    if (existing) {
-      await prisma.question.update({ where: { id: existing.id }, data });
-      updated += 1;
-    } else {
-      await prisma.question.create({ data });
-      created += 1;
-    }
+    await prisma.question.upsert({
+      where: { seedKey: question.seedKey },
+      update: data,
+      create: { seedKey: question.seedKey, ...data },
+    });
+    if (existing) updated += 1;
+    else created += 1;
   }
   console.log(`  questions: ${created} created, ${updated} updated`);
 
@@ -111,7 +111,55 @@ async function main(): Promise<void> {
     questions: await prisma.question.count(),
     users: await prisma.user.count(),
   };
+  await assertQuestionBank(totals);
   console.log('Done.', totals);
+}
+
+/**
+ * Fails the seed loudly unless the bank is complete: 7 categories, 105 seeded
+ * questions, and exactly 5 items for every category and difficulty pair.
+ * A silent loss of items (as happened with repeated question texts) must
+ * never go unnoticed again.
+ */
+async function assertQuestionBank(totals: { categories: number; questions: number }): Promise<void> {
+  const DIFFICULTIES: Difficulty[] = ['EASY', 'AVERAGE', 'DIFFICULT'];
+  const PER_PAIR = 5;
+  const expectedQuestions = categories.length * DIFFICULTIES.length * PER_PAIR;
+  const problems: string[] = [];
+
+  if (totals.categories !== categories.length) {
+    problems.push(`expected ${categories.length} categories, found ${totals.categories}`);
+  }
+  const seededQuestions = await prisma.question.count({ where: { seedKey: { not: null } } });
+  if (seededQuestions !== expectedQuestions) {
+    problems.push(`expected ${expectedQuestions} seeded questions, found ${seededQuestions}`);
+  }
+
+  const groups = await prisma.question.groupBy({
+    by: ['categoryId', 'difficulty'],
+    where: { seedKey: { not: null } },
+    _count: { _all: true },
+  });
+  const saved = await prisma.category.findMany({ select: { id: true, slug: true } });
+  const slugById = new Map(saved.map((c) => [c.id, c.slug]));
+  for (const { slug } of categories) {
+    for (const difficulty of DIFFICULTIES) {
+      const group = groups.find(
+        (g) => slugById.get(g.categoryId) === slug && g.difficulty === difficulty,
+      );
+      const count = group?._count._all ?? 0;
+      if (count !== PER_PAIR) {
+        problems.push(`${slug} / ${difficulty}: expected ${PER_PAIR} questions, found ${count}`);
+      }
+    }
+  }
+
+  if (problems.length) {
+    throw new Error(`Seed check failed:\n  - ${problems.join('\n  - ')}`);
+  }
+  console.log(
+    `  check passed: ${totals.categories} categories, ${seededQuestions} questions, ${PER_PAIR} per category and difficulty`,
+  );
 }
 
 main()

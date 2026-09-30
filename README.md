@@ -56,7 +56,7 @@ cp .env.example .env          # then edit DATABASE_URL
 
 # 2. API
 npm install                   # also runs prisma generate
-npx prisma migrate dev --name init
+npx prisma migrate dev        # applies the committed migrations in prisma/migrations
 npm run prisma:seed
 npm run start:dev             # http://localhost:3000/api/health
 
@@ -79,6 +79,18 @@ On the mobile app's API address screen (gear button on the login screen), set th
 - Deployed API: `https://<your-service>.onrender.com/api`
 
 The address is saved on the device, so switching between local and deployed needs **no new APK**.
+
+### Migrations: development vs deployment
+
+The migrations in `api/prisma/migrations/` are committed and are the only source of the
+database structure.
+
+- **Local development:** `npx prisma migrate dev`. It applies the committed migrations. After
+  you change `schema.prisma`, run `npx prisma migrate dev --name <what-changed>` to create a
+  new migration, and commit that folder with the schema change.
+- **Deployment (Render against Neon):** `npx prisma migrate deploy`. It only applies committed
+  migrations and never resets data, e.g. as the Render build command
+  `npm install && npx prisma migrate deploy && npm run build`.
 
 ## Useful commands
 
@@ -108,11 +120,15 @@ Passwords are hashed with bcrypt (cost 10) before storage, as stated in Chapter 
 ## Editing the seed content
 
 - `api/prisma/seed-data/categories.ts` — the 7 subject categories
-- `api/prisma/seed-data/questions.ts` — all 105 items (15 per category: 5 easy, 5 average, 5 difficult)
+- `api/prisma/seed-data/questions.ts` — all 105 items (15 per category: 5 easy, 5 average, 5 difficult).
+  Each item has a fixed `seedKey` (`<category>-<difficulty>-<nn>`, e.g. `net-easy-03`) that the seed
+  upserts on; keep the key when you edit an item, and give a new item a new key. Question texts
+  may repeat inside a category (the picture tells picture items apart).
 - `api/public/images/*.svg` — the pictures for picture-guess items, served at `/static/images/<name>.svg`
 - `api/src/common/game-rules.ts` — timers, points, speed bonus, hint penalties
 
-After editing, run `npm run prisma:seed` again.
+After editing, run `npm run prisma:seed` again. The seed stops with an error unless there are
+7 categories, 105 questions and exactly 5 items for every category and difficulty.
 
 ## Free-tier behavior to explain during the defense
 
@@ -121,6 +137,16 @@ request afterwards takes roughly 30–50 seconds while the service wakes up; eve
 that is normal. Neon also auto-suspends but wakes in a second or two. Before presenting, open
 `/api/health` (or the admin panel) to wake the server, and keep a tab open so it stays awake.
 A free uptime pinger hitting `/api/health` every 10 minutes does the same automatically.
+
+## Known limits
+
+- **Login rate limit is keyed on IP address + email.** A whole class on the school Wi-Fi shares
+  one public IP, so a limit per IP alone would let one student's wrong passwords lock out the
+  room. Login allows 10 attempts per minute for each IP + email; the 11th gets HTTP 429 ("Too
+  many attempts. Please wait a minute and try again."). Registration allows 5 per minute per IP,
+  so a class registering at once on shared Wi-Fi should do it a few at a time. The counters are
+  kept in the API's memory: they reset when the server restarts, and they would not be shared if
+  the API ever ran on more than one instance.
 
 ## Note for the documentation
 

@@ -81,6 +81,9 @@ model Category {
 /// Cloudinary secure URL once uploaded from the admin panel).
 model Question {
   id            String       @id @default(cuid())
+  /// Stable key of items loaded by the seed (e.g. "net-easy-03"); null for
+  /// items created in the admin panel. The seed upserts on it.
+  seedKey       String?      @unique
   categoryId    String
   type          QuestionType
   difficulty    Difficulty

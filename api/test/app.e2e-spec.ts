@@ -174,17 +174,36 @@ describe('GuessUp API (e2e)', () => {
     });
   });
 
-  it('throttles login after 5 attempts per minute from one IP', async () => {
+  it('throttles login at 10 attempts per minute per IP + email, without locking out other emails', async () => {
     // A fresh app, so the attempts above do not count towards the limit.
     const fresh = await createApp();
     try {
       const server = fresh.getHttpServer() as App;
-      const bad = { email: STUDENT.email, password: 'brute-force-guess' };
-      for (let i = 0; i < 5; i++) {
-        await request(server).post('/api/auth/login').send(bad).expect(401);
+      // Same email typed differently still counts as one key.
+      const bad = (email: string) => ({ email, password: 'brute-force-guess' });
+      for (let i = 0; i < 10; i++) {
+        const email = i % 2 ? ADMIN.email : `  ${ADMIN.email.toUpperCase()} `;
+        await request(server).post('/api/auth/login').send(bad(email)).expect(401);
       }
-      const blocked = await request(server).post('/api/auth/login').send(bad).expect(429);
+      const blocked = await request(server).post('/api/auth/login').send(bad(ADMIN.email)).expect(429);
       expect(blocked.body.message).toBe('Too many attempts. Please wait a minute and try again.');
+
+      // A classmate on the same IP (same Wi-Fi) can still sign in.
+      await request(server).post('/api/auth/login').send(STUDENT).expect(200);
+    } finally {
+      await fresh.close();
+    }
+  });
+
+  it('throttles register at 5 requests per minute per IP', async () => {
+    const fresh = await createApp();
+    try {
+      const server = fresh.getHttpServer() as App;
+      // Invalid bodies (400) still count, so no accounts are created.
+      for (let i = 0; i < 5; i++) {
+        await request(server).post('/api/auth/register').send({ email: `x${i}` }).expect(400);
+      }
+      await request(server).post('/api/auth/register').send({ email: 'x6' }).expect(429);
     } finally {
       await fresh.close();
     }

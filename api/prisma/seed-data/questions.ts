@@ -4,6 +4,13 @@
 // (later these can be re-uploaded to Cloudinary from the admin panel).
 
 export interface SeedQuestion {
+  /**
+   * Stable identity used by the seed to upsert: <categorySlug>-<difficulty>-<nn>.
+   * Written out here (not computed) so reordering items never changes a key.
+   * Needed because some question texts repeat on purpose inside a category
+   * (e.g. "Name this network topology." — the picture tells them apart).
+   */
+  seedKey: string;
   categorySlug: string;
   type: 'MULTIPLE_CHOICE' | 'PICTURE' | 'WORD_PUZZLE';
   difficulty: 'EASY' | 'AVERAGE' | 'DIFFICULT';
@@ -20,6 +27,7 @@ export interface SeedQuestion {
 
 export const questions: SeedQuestion[] = [
   {
+    seedKey: "prog-easy-01",
     categorySlug: "prog",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -34,6 +42,7 @@ export const questions: SeedQuestion[] = [
     topic: "Variables",
   },
   {
+    seedKey: "prog-easy-02",
     categorySlug: "prog",
     type: "WORD_PUZZLE",
     difficulty: "EASY",
@@ -48,6 +57,7 @@ export const questions: SeedQuestion[] = [
     topic: "Problem Solving",
   },
   {
+    seedKey: "prog-easy-03",
     categorySlug: "prog",
     type: "PICTURE",
     difficulty: "EASY",
@@ -62,6 +72,7 @@ export const questions: SeedQuestion[] = [
     topic: "Flowcharting",
   },
   {
+    seedKey: "prog-easy-04",
     categorySlug: "prog",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -76,6 +87,7 @@ export const questions: SeedQuestion[] = [
     topic: "Data Types",
   },
   {
+    seedKey: "prog-easy-05",
     categorySlug: "prog",
     type: "WORD_PUZZLE",
     difficulty: "EASY",
@@ -90,6 +102,7 @@ export const questions: SeedQuestion[] = [
     topic: "Errors",
   },
   {
+    seedKey: "prog-average-01",
     categorySlug: "prog",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -104,6 +117,7 @@ export const questions: SeedQuestion[] = [
     topic: "Operators",
   },
   {
+    seedKey: "prog-average-02",
     categorySlug: "prog",
     type: "PICTURE",
     difficulty: "AVERAGE",
@@ -118,6 +132,7 @@ export const questions: SeedQuestion[] = [
     topic: "Loops",
   },
   {
+    seedKey: "prog-average-03",
     categorySlug: "prog",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -132,6 +147,7 @@ export const questions: SeedQuestion[] = [
     topic: "Functions",
   },
   {
+    seedKey: "prog-average-04",
     categorySlug: "prog",
     type: "WORD_PUZZLE",
     difficulty: "AVERAGE",
@@ -146,6 +162,7 @@ export const questions: SeedQuestion[] = [
     topic: "OOP",
   },
   {
+    seedKey: "prog-average-05",
     categorySlug: "prog",
     type: "PICTURE",
     difficulty: "AVERAGE",
@@ -160,6 +177,7 @@ export const questions: SeedQuestion[] = [
     topic: "Flowcharting",
   },
   {
+    seedKey: "prog-difficult-01",
     categorySlug: "prog",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -174,6 +192,7 @@ export const questions: SeedQuestion[] = [
     topic: "Operators",
   },
   {
+    seedKey: "prog-difficult-02",
     categorySlug: "prog",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -188,6 +207,7 @@ export const questions: SeedQuestion[] = [
     topic: "OOP",
   },
   {
+    seedKey: "prog-difficult-03",
     categorySlug: "prog",
     type: "WORD_PUZZLE",
     difficulty: "DIFFICULT",
@@ -202,6 +222,7 @@ export const questions: SeedQuestion[] = [
     topic: "Errors",
   },
   {
+    seedKey: "prog-difficult-04",
     categorySlug: "prog",
     type: "PICTURE",
     difficulty: "DIFFICULT",
@@ -216,6 +237,7 @@ export const questions: SeedQuestion[] = [
     topic: "Loops",
   },
   {
+    seedKey: "prog-difficult-05",
     categorySlug: "prog",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -230,6 +252,7 @@ export const questions: SeedQuestion[] = [
     topic: "Functions",
   },
   {
+    seedKey: "dsa-easy-01",
     categorySlug: "dsa",
     type: "PICTURE",
     difficulty: "EASY",
@@ -244,6 +267,7 @@ export const questions: SeedQuestion[] = [
     topic: "Stacks",
   },
   {
+    seedKey: "dsa-easy-02",
     categorySlug: "dsa",
     type: "PICTURE",
     difficulty: "EASY",
@@ -258,6 +282,7 @@ export const questions: SeedQuestion[] = [
     topic: "Queues",
   },
   {
+    seedKey: "dsa-easy-03",
     categorySlug: "dsa",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -272,6 +297,7 @@ export const questions: SeedQuestion[] = [
     topic: "Complexity",
   },
   {
+    seedKey: "dsa-easy-04",
     categorySlug: "dsa",
     type: "WORD_PUZZLE",
     difficulty: "EASY",
@@ -286,6 +312,7 @@ export const questions: SeedQuestion[] = [
     topic: "Trees",
   },
   {
+    seedKey: "dsa-easy-05",
     categorySlug: "dsa",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -300,6 +327,7 @@ export const questions: SeedQuestion[] = [
     topic: "Searching",
   },
   {
+    seedKey: "dsa-average-01",
     categorySlug: "dsa",
     type: "PICTURE",
     difficulty: "AVERAGE",
@@ -314,6 +342,7 @@ export const questions: SeedQuestion[] = [
     topic: "Trees",
   },
   {
+    seedKey: "dsa-average-02",
     categorySlug: "dsa",
     type: "PICTURE",
     difficulty: "AVERAGE",
@@ -328,6 +357,7 @@ export const questions: SeedQuestion[] = [
     topic: "Linked Lists",
   },
   {
+    seedKey: "dsa-average-03",
     categorySlug: "dsa",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -342,6 +372,7 @@ export const questions: SeedQuestion[] = [
     topic: "Stacks",
   },
   {
+    seedKey: "dsa-average-04",
     categorySlug: "dsa",
     type: "WORD_PUZZLE",
     difficulty: "AVERAGE",
@@ -356,6 +387,7 @@ export const questions: SeedQuestion[] = [
     topic: "Sorting",
   },
   {
+    seedKey: "dsa-average-05",
     categorySlug: "dsa",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -370,6 +402,7 @@ export const questions: SeedQuestion[] = [
     topic: "Complexity",
   },
   {
+    seedKey: "dsa-difficult-01",
     categorySlug: "dsa",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -384,6 +417,7 @@ export const questions: SeedQuestion[] = [
     topic: "Sorting",
   },
   {
+    seedKey: "dsa-difficult-02",
     categorySlug: "dsa",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -398,6 +432,7 @@ export const questions: SeedQuestion[] = [
     topic: "Queues",
   },
   {
+    seedKey: "dsa-difficult-03",
     categorySlug: "dsa",
     type: "WORD_PUZZLE",
     difficulty: "DIFFICULT",
@@ -412,6 +447,7 @@ export const questions: SeedQuestion[] = [
     topic: "Graphs",
   },
   {
+    seedKey: "dsa-difficult-04",
     categorySlug: "dsa",
     type: "PICTURE",
     difficulty: "DIFFICULT",
@@ -426,6 +462,7 @@ export const questions: SeedQuestion[] = [
     topic: "Trees",
   },
   {
+    seedKey: "dsa-difficult-05",
     categorySlug: "dsa",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -440,6 +477,7 @@ export const questions: SeedQuestion[] = [
     topic: "Hashing",
   },
   {
+    seedKey: "dbms-easy-01",
     categorySlug: "dbms",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -454,6 +492,7 @@ export const questions: SeedQuestion[] = [
     topic: "SQL",
   },
   {
+    seedKey: "dbms-easy-02",
     categorySlug: "dbms",
     type: "PICTURE",
     difficulty: "EASY",
@@ -468,6 +507,7 @@ export const questions: SeedQuestion[] = [
     topic: "Keys",
   },
   {
+    seedKey: "dbms-easy-03",
     categorySlug: "dbms",
     type: "WORD_PUZZLE",
     difficulty: "EASY",
@@ -482,6 +522,7 @@ export const questions: SeedQuestion[] = [
     topic: "Relational Model",
   },
   {
+    seedKey: "dbms-easy-04",
     categorySlug: "dbms",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -496,6 +537,7 @@ export const questions: SeedQuestion[] = [
     topic: "Fundamentals",
   },
   {
+    seedKey: "dbms-easy-05",
     categorySlug: "dbms",
     type: "WORD_PUZZLE",
     difficulty: "EASY",
@@ -510,6 +552,7 @@ export const questions: SeedQuestion[] = [
     topic: "Fundamentals",
   },
   {
+    seedKey: "dbms-average-01",
     categorySlug: "dbms",
     type: "PICTURE",
     difficulty: "AVERAGE",
@@ -524,6 +567,7 @@ export const questions: SeedQuestion[] = [
     topic: "ERD",
   },
   {
+    seedKey: "dbms-average-02",
     categorySlug: "dbms",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -538,6 +582,7 @@ export const questions: SeedQuestion[] = [
     topic: "SQL",
   },
   {
+    seedKey: "dbms-average-03",
     categorySlug: "dbms",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -552,6 +597,7 @@ export const questions: SeedQuestion[] = [
     topic: "Keys",
   },
   {
+    seedKey: "dbms-average-04",
     categorySlug: "dbms",
     type: "WORD_PUZZLE",
     difficulty: "AVERAGE",
@@ -566,6 +612,7 @@ export const questions: SeedQuestion[] = [
     topic: "SQL",
   },
   {
+    seedKey: "dbms-average-05",
     categorySlug: "dbms",
     type: "PICTURE",
     difficulty: "AVERAGE",
@@ -580,6 +627,7 @@ export const questions: SeedQuestion[] = [
     topic: "SQL",
   },
   {
+    seedKey: "dbms-difficult-01",
     categorySlug: "dbms",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -594,6 +642,7 @@ export const questions: SeedQuestion[] = [
     topic: "Normalization",
   },
   {
+    seedKey: "dbms-difficult-02",
     categorySlug: "dbms",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -608,6 +657,7 @@ export const questions: SeedQuestion[] = [
     topic: "SQL",
   },
   {
+    seedKey: "dbms-difficult-03",
     categorySlug: "dbms",
     type: "WORD_PUZZLE",
     difficulty: "DIFFICULT",
@@ -622,6 +672,7 @@ export const questions: SeedQuestion[] = [
     topic: "Transactions",
   },
   {
+    seedKey: "dbms-difficult-04",
     categorySlug: "dbms",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -636,6 +687,7 @@ export const questions: SeedQuestion[] = [
     topic: "Transactions",
   },
   {
+    seedKey: "dbms-difficult-05",
     categorySlug: "dbms",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -650,6 +702,7 @@ export const questions: SeedQuestion[] = [
     topic: "Normalization",
   },
   {
+    seedKey: "net-easy-01",
     categorySlug: "net",
     type: "PICTURE",
     difficulty: "EASY",
@@ -664,6 +717,7 @@ export const questions: SeedQuestion[] = [
     topic: "Topologies",
   },
   {
+    seedKey: "net-easy-02",
     categorySlug: "net",
     type: "PICTURE",
     difficulty: "EASY",
@@ -678,6 +732,7 @@ export const questions: SeedQuestion[] = [
     topic: "Topologies",
   },
   {
+    seedKey: "net-easy-03",
     categorySlug: "net",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -692,6 +747,7 @@ export const questions: SeedQuestion[] = [
     topic: "Devices",
   },
   {
+    seedKey: "net-easy-04",
     categorySlug: "net",
     type: "WORD_PUZZLE",
     difficulty: "EASY",
@@ -706,6 +762,7 @@ export const questions: SeedQuestion[] = [
     topic: "Addressing",
   },
   {
+    seedKey: "net-easy-05",
     categorySlug: "net",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -720,6 +777,7 @@ export const questions: SeedQuestion[] = [
     topic: "OSI Model",
   },
   {
+    seedKey: "net-average-01",
     categorySlug: "net",
     type: "PICTURE",
     difficulty: "AVERAGE",
@@ -734,6 +792,7 @@ export const questions: SeedQuestion[] = [
     topic: "Topologies",
   },
   {
+    seedKey: "net-average-02",
     categorySlug: "net",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -748,6 +807,7 @@ export const questions: SeedQuestion[] = [
     topic: "Ports",
   },
   {
+    seedKey: "net-average-03",
     categorySlug: "net",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -762,6 +822,7 @@ export const questions: SeedQuestion[] = [
     topic: "Protocols",
   },
   {
+    seedKey: "net-average-04",
     categorySlug: "net",
     type: "WORD_PUZZLE",
     difficulty: "AVERAGE",
@@ -776,6 +837,7 @@ export const questions: SeedQuestion[] = [
     topic: "Protocols",
   },
   {
+    seedKey: "net-average-05",
     categorySlug: "net",
     type: "PICTURE",
     difficulty: "AVERAGE",
@@ -790,6 +852,7 @@ export const questions: SeedQuestion[] = [
     topic: "Topologies",
   },
   {
+    seedKey: "net-difficult-01",
     categorySlug: "net",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -804,6 +867,7 @@ export const questions: SeedQuestion[] = [
     topic: "Subnetting",
   },
   {
+    seedKey: "net-difficult-02",
     categorySlug: "net",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -818,6 +882,7 @@ export const questions: SeedQuestion[] = [
     topic: "OSI Model",
   },
   {
+    seedKey: "net-difficult-03",
     categorySlug: "net",
     type: "WORD_PUZZLE",
     difficulty: "DIFFICULT",
@@ -832,6 +897,7 @@ export const questions: SeedQuestion[] = [
     topic: "Protocols",
   },
   {
+    seedKey: "net-difficult-04",
     categorySlug: "net",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -846,6 +912,7 @@ export const questions: SeedQuestion[] = [
     topic: "Addressing",
   },
   {
+    seedKey: "net-difficult-05",
     categorySlug: "net",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -860,6 +927,7 @@ export const questions: SeedQuestion[] = [
     topic: "Subnetting",
   },
   {
+    seedKey: "web-easy-01",
     categorySlug: "web",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -874,6 +942,7 @@ export const questions: SeedQuestion[] = [
     topic: "HTML",
   },
   {
+    seedKey: "web-easy-02",
     categorySlug: "web",
     type: "PICTURE",
     difficulty: "EASY",
@@ -888,6 +957,7 @@ export const questions: SeedQuestion[] = [
     topic: "HTML",
   },
   {
+    seedKey: "web-easy-03",
     categorySlug: "web",
     type: "WORD_PUZZLE",
     difficulty: "EASY",
@@ -902,6 +972,7 @@ export const questions: SeedQuestion[] = [
     topic: "CSS",
   },
   {
+    seedKey: "web-easy-04",
     categorySlug: "web",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -916,6 +987,7 @@ export const questions: SeedQuestion[] = [
     topic: "HTML",
   },
   {
+    seedKey: "web-easy-05",
     categorySlug: "web",
     type: "WORD_PUZZLE",
     difficulty: "EASY",
@@ -930,6 +1002,7 @@ export const questions: SeedQuestion[] = [
     topic: "Fundamentals",
   },
   {
+    seedKey: "web-average-01",
     categorySlug: "web",
     type: "PICTURE",
     difficulty: "AVERAGE",
@@ -944,6 +1017,7 @@ export const questions: SeedQuestion[] = [
     topic: "CSS",
   },
   {
+    seedKey: "web-average-02",
     categorySlug: "web",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -958,6 +1032,7 @@ export const questions: SeedQuestion[] = [
     topic: "HTTP",
   },
   {
+    seedKey: "web-average-03",
     categorySlug: "web",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -972,6 +1047,7 @@ export const questions: SeedQuestion[] = [
     topic: "JavaScript",
   },
   {
+    seedKey: "web-average-04",
     categorySlug: "web",
     type: "WORD_PUZZLE",
     difficulty: "AVERAGE",
@@ -986,6 +1062,7 @@ export const questions: SeedQuestion[] = [
     topic: "CSS",
   },
   {
+    seedKey: "web-average-05",
     categorySlug: "web",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -1000,6 +1077,7 @@ export const questions: SeedQuestion[] = [
     topic: "HTTP",
   },
   {
+    seedKey: "web-difficult-01",
     categorySlug: "web",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -1014,6 +1092,7 @@ export const questions: SeedQuestion[] = [
     topic: "JavaScript",
   },
   {
+    seedKey: "web-difficult-02",
     categorySlug: "web",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -1028,6 +1107,7 @@ export const questions: SeedQuestion[] = [
     topic: "JavaScript",
   },
   {
+    seedKey: "web-difficult-03",
     categorySlug: "web",
     type: "WORD_PUZZLE",
     difficulty: "DIFFICULT",
@@ -1042,6 +1122,7 @@ export const questions: SeedQuestion[] = [
     topic: "Security",
   },
   {
+    seedKey: "web-difficult-04",
     categorySlug: "web",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -1056,6 +1137,7 @@ export const questions: SeedQuestion[] = [
     topic: "CSS",
   },
   {
+    seedKey: "web-difficult-05",
     categorySlug: "web",
     type: "PICTURE",
     difficulty: "DIFFICULT",
@@ -1070,6 +1152,7 @@ export const questions: SeedQuestion[] = [
     topic: "JavaScript",
   },
   {
+    seedKey: "sad-easy-01",
     categorySlug: "sad",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -1084,6 +1167,7 @@ export const questions: SeedQuestion[] = [
     topic: "SDLC",
   },
   {
+    seedKey: "sad-easy-02",
     categorySlug: "sad",
     type: "PICTURE",
     difficulty: "EASY",
@@ -1098,6 +1182,7 @@ export const questions: SeedQuestion[] = [
     topic: "UML",
   },
   {
+    seedKey: "sad-easy-03",
     categorySlug: "sad",
     type: "WORD_PUZZLE",
     difficulty: "EASY",
@@ -1112,6 +1197,7 @@ export const questions: SeedQuestion[] = [
     topic: "Roles",
   },
   {
+    seedKey: "sad-easy-04",
     categorySlug: "sad",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -1126,6 +1212,7 @@ export const questions: SeedQuestion[] = [
     topic: "SDLC",
   },
   {
+    seedKey: "sad-easy-05",
     categorySlug: "sad",
     type: "WORD_PUZZLE",
     difficulty: "EASY",
@@ -1140,6 +1227,7 @@ export const questions: SeedQuestion[] = [
     topic: "Methods",
   },
   {
+    seedKey: "sad-average-01",
     categorySlug: "sad",
     type: "PICTURE",
     difficulty: "AVERAGE",
@@ -1154,6 +1242,7 @@ export const questions: SeedQuestion[] = [
     topic: "SDLC",
   },
   {
+    seedKey: "sad-average-02",
     categorySlug: "sad",
     type: "PICTURE",
     difficulty: "AVERAGE",
@@ -1168,6 +1257,7 @@ export const questions: SeedQuestion[] = [
     topic: "DFD",
   },
   {
+    seedKey: "sad-average-03",
     categorySlug: "sad",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -1182,6 +1272,7 @@ export const questions: SeedQuestion[] = [
     topic: "Feasibility",
   },
   {
+    seedKey: "sad-average-04",
     categorySlug: "sad",
     type: "WORD_PUZZLE",
     difficulty: "AVERAGE",
@@ -1196,6 +1287,7 @@ export const questions: SeedQuestion[] = [
     topic: "Methods",
   },
   {
+    seedKey: "sad-average-05",
     categorySlug: "sad",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -1210,6 +1302,7 @@ export const questions: SeedQuestion[] = [
     topic: "UML",
   },
   {
+    seedKey: "sad-difficult-01",
     categorySlug: "sad",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -1224,6 +1317,7 @@ export const questions: SeedQuestion[] = [
     topic: "UML",
   },
   {
+    seedKey: "sad-difficult-02",
     categorySlug: "sad",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -1238,6 +1332,7 @@ export const questions: SeedQuestion[] = [
     topic: "Testing",
   },
   {
+    seedKey: "sad-difficult-03",
     categorySlug: "sad",
     type: "WORD_PUZZLE",
     difficulty: "DIFFICULT",
@@ -1252,6 +1347,7 @@ export const questions: SeedQuestion[] = [
     topic: "Project Management",
   },
   {
+    seedKey: "sad-difficult-04",
     categorySlug: "sad",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -1266,6 +1362,7 @@ export const questions: SeedQuestion[] = [
     topic: "UML",
   },
   {
+    seedKey: "sad-difficult-05",
     categorySlug: "sad",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -1280,6 +1377,7 @@ export const questions: SeedQuestion[] = [
     topic: "ERD",
   },
   {
+    seedKey: "ias-easy-01",
     categorySlug: "ias",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -1294,6 +1392,7 @@ export const questions: SeedQuestion[] = [
     topic: "CIA Triad",
   },
   {
+    seedKey: "ias-easy-02",
     categorySlug: "ias",
     type: "PICTURE",
     difficulty: "EASY",
@@ -1308,6 +1407,7 @@ export const questions: SeedQuestion[] = [
     topic: "Network Security",
   },
   {
+    seedKey: "ias-easy-03",
     categorySlug: "ias",
     type: "WORD_PUZZLE",
     difficulty: "EASY",
@@ -1322,6 +1422,7 @@ export const questions: SeedQuestion[] = [
     topic: "Malware",
   },
   {
+    seedKey: "ias-easy-04",
     categorySlug: "ias",
     type: "MULTIPLE_CHOICE",
     difficulty: "EASY",
@@ -1336,6 +1437,7 @@ export const questions: SeedQuestion[] = [
     topic: "Passwords",
   },
   {
+    seedKey: "ias-easy-05",
     categorySlug: "ias",
     type: "PICTURE",
     difficulty: "EASY",
@@ -1350,6 +1452,7 @@ export const questions: SeedQuestion[] = [
     topic: "Social Engineering",
   },
   {
+    seedKey: "ias-average-01",
     categorySlug: "ias",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -1364,6 +1467,7 @@ export const questions: SeedQuestion[] = [
     topic: "Access Control",
   },
   {
+    seedKey: "ias-average-02",
     categorySlug: "ias",
     type: "PICTURE",
     difficulty: "AVERAGE",
@@ -1378,6 +1482,7 @@ export const questions: SeedQuestion[] = [
     topic: "Cryptography",
   },
   {
+    seedKey: "ias-average-03",
     categorySlug: "ias",
     type: "WORD_PUZZLE",
     difficulty: "AVERAGE",
@@ -1392,6 +1497,7 @@ export const questions: SeedQuestion[] = [
     topic: "Access Control",
   },
   {
+    seedKey: "ias-average-04",
     categorySlug: "ias",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -1406,6 +1512,7 @@ export const questions: SeedQuestion[] = [
     topic: "Attacks",
   },
   {
+    seedKey: "ias-average-05",
     categorySlug: "ias",
     type: "MULTIPLE_CHOICE",
     difficulty: "AVERAGE",
@@ -1420,6 +1527,7 @@ export const questions: SeedQuestion[] = [
     topic: "CIA Triad",
   },
   {
+    seedKey: "ias-difficult-01",
     categorySlug: "ias",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -1434,6 +1542,7 @@ export const questions: SeedQuestion[] = [
     topic: "Attacks",
   },
   {
+    seedKey: "ias-difficult-02",
     categorySlug: "ias",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -1448,6 +1557,7 @@ export const questions: SeedQuestion[] = [
     topic: "Cryptography",
   },
   {
+    seedKey: "ias-difficult-03",
     categorySlug: "ias",
     type: "WORD_PUZZLE",
     difficulty: "DIFFICULT",
@@ -1462,6 +1572,7 @@ export const questions: SeedQuestion[] = [
     topic: "Cryptography",
   },
   {
+    seedKey: "ias-difficult-04",
     categorySlug: "ias",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
@@ -1476,6 +1587,7 @@ export const questions: SeedQuestion[] = [
     topic: "Access Control",
   },
   {
+    seedKey: "ias-difficult-05",
     categorySlug: "ias",
     type: "MULTIPLE_CHOICE",
     difficulty: "DIFFICULT",
