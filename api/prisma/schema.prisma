@@ -124,6 +124,16 @@ model GameSession {
   hintsUsed    Int           @default(0)
   status       SessionStatus @default(IN_PROGRESS)
 
+  // Server-side round state (the game logic lives on the server, Chapter III).
+  /// Question ids drawn for this round, in play order.
+  itemIds         String[]  @default([])
+  /// 0-based index of the item the student is answering now.
+  currentIndex    Int       @default(0)
+  /// When the current item was sent to the app; the timer is measured from here.
+  currentServedAt DateTime?
+  /// Whether the hint was used on the current item.
+  currentHintUsed Boolean   @default(false)
+
   user     User      @relation(fields: [userId], references: [id])
   category Category  @relation(fields: [categoryId], references: [id])
   answers  Answer[]

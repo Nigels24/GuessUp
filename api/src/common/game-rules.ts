@@ -29,6 +29,12 @@ export const ROUND_SIZE = 5;
 /** Answering instantly adds up to this share of the base points. */
 export const SPEED_BONUS = 0.5;
 
+/**
+ * Network slack, in seconds, allowed on top of an item's time limit before the
+ * server treats an answer as a timeout (the timer runs on the server).
+ */
+export const ANSWER_GRACE_SECONDS = 2;
+
 export const LEVELS: Record<DifficultyKey, LevelRule> = {
   EASY: { seconds: 60, hints: 1, hintPenalty: 3, points: 10 },
   AVERAGE: { seconds: 45, hints: 1, hintPenalty: 5, points: 20 },

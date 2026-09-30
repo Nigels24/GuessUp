@@ -38,7 +38,17 @@ behavior, wording and seed content.
 - Mobile app: Expo Router with login, register, home placeholder and the API address screen
   (gear button on the login screen); the token is kept in `expo-secure-store`
 
-Not built yet: gameplay, admin CRUD screens, leaderboards, reports.
+## Step 3A: gameplay API
+
+- `GET /api/categories` and the `/api/game/...` endpoints: start a round, current item, hint,
+  answer, finish, abandon, read a finished round, history
+- Server-authoritative: the app never receives an answer before answering, the timer runs from
+  a server timestamp (+2 s network grace, `ANSWER_GRACE_SECONDS`), and points are computed with
+  `game-rules.ts`. A replayed or duplicate request gets 409 instead of scoring twice
+- Finishing a round updates the per-category leaderboard and awards the 8 prototype badges
+  (`api/src/common/badges.ts`)
+
+Not built yet: mobile gameplay screens, admin CRUD screens, leaderboard endpoints, reports.
 
 ---
 
@@ -97,8 +107,8 @@ database structure.
 ```bash
 # api/
 npm run start:dev        # watch mode
-npm test                 # unit tests (game rules, auth service)
-npm run test:e2e         # health + auth endpoints, needs the seeded database and JWT_SECRET in .env
+npm test                 # unit tests (game rules, badges, round logic, auth service)
+npm run test:e2e         # auth + a full game round, needs the seeded database and JWT_SECRET in .env
 npm run prisma:studio    # browse the data
 npm run prisma:seed      # re-run the seed (safe to repeat)
 npm run prisma:reset     # drop, re-migrate and re-seed

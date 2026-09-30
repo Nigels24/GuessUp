@@ -1,12 +1,10 @@
 import { Controller, Get } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
-import { AppModule } from './../src/app.module.js';
-import { configureApp } from './../src/app.setup.js';
 import { Roles } from './../src/auth/roles.decorator.js';
 import { PrismaService } from './../src/prisma/prisma.service.js';
+import { createApp } from './helpers.js';
 
 /**
  * End-to-end checks for the health and auth endpoints.
@@ -25,18 +23,6 @@ class AdminOnlyController {
   }
 }
 
-async function createApp(): Promise<NestExpressApplication> {
-  const moduleFixture: TestingModule = await Test.createTestingModule({
-    imports: [AppModule],
-    controllers: [AdminOnlyController],
-  }).compile();
-
-  const app = moduleFixture.createNestApplication<NestExpressApplication>();
-  configureApp(app);
-  await app.init();
-  return app;
-}
-
 const STUDENT = { email: 'student@jhcsc.edu.ph', password: 'student123' };
 const ADMIN = { email: 'admin@jhcsc.edu.ph', password: 'admin123' };
 
@@ -47,7 +33,7 @@ describe('GuessUp API (e2e)', () => {
   const throwawayEmail = `e2e-${Date.now()}@example.com`;
 
   beforeAll(async () => {
-    app = await createApp();
+    app = await createApp([AdminOnlyController]);
     http = app.getHttpServer() as App;
     prisma = app.get(PrismaService);
   });

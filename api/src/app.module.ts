@@ -1,7 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module.js';
+import { CategoriesModule } from './categories/categories.module.js';
+import { GameModule } from './game/game.module.js';
 import { HealthModule } from './health/health.module.js';
+import { LeaderboardModule } from './leaderboard/leaderboard.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 
 @Module({
@@ -10,9 +13,12 @@ import { PrismaModule } from './prisma/prisma.module.js';
     PrismaModule,
     AuthModule,
     HealthModule,
-    // Next steps add CategoriesModule, QuestionsModule, GameModule,
-    // LeaderboardModule and ReportsModule. AuthModule's global guard protects
-    // every route they add unless it is marked @Public().
+    CategoriesModule,
+    GameModule,
+    LeaderboardModule,
+    // Next steps add QuestionsModule, the leaderboard endpoints and
+    // ReportsModule. AuthModule's global guard protects every route they add
+    // unless it is marked @Public().
   ],
 })
 export class AppModule {}

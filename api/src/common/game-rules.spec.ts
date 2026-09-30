@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ANSWER_GRACE_SECONDS,
   LEVELS,
   ROUND_SIZE,
   accuracyPercent,
@@ -11,6 +12,7 @@ import {
 describe('game rules constants', () => {
   it('matches the approved prototype', () => {
     expect(ROUND_SIZE).toBe(5);
+    expect(ANSWER_GRACE_SECONDS).toBe(2);
     expect(LEVELS.EASY).toEqual({ seconds: 60, hints: 1, hintPenalty: 3, points: 10 });
     expect(LEVELS.AVERAGE).toEqual({ seconds: 45, hints: 1, hintPenalty: 5, points: 20 });
     expect(LEVELS.DIFFICULT).toEqual({ seconds: 30, hints: 0, hintPenalty: 0, points: 30 });
