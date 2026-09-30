@@ -28,7 +28,17 @@ behavior, wording and seed content.
 - Admin page that checks the API connection
 - Mobile starter screen where the API address can be set and tested
 
-Not built yet: authentication, gameplay, admin CRUD screens, leaderboards, reports.
+## Step 2: authentication
+
+- `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me` (JWT, bcrypt cost 10)
+- Every API route requires a token unless marked `@Public()`; `@Roles('ADMIN')` restricts admin routes
+- Deactivated accounts lose access on their next request
+- Login and register are rate-limited to 5 requests per minute per IP (HTTP 429 after that)
+- Admin panel: `/login`, protected sidebar layout, `/dashboard` greeting, `/status` API check
+- Mobile app: Expo Router with login, register, home placeholder and the API address screen
+  (gear button on the login screen); the token is kept in `expo-secure-store`
+
+Not built yet: gameplay, admin CRUD screens, leaderboards, reports.
 
 ---
 
@@ -62,7 +72,7 @@ npm install
 npx expo start                # press a for Android, or scan with Expo Go
 ```
 
-On the mobile starter screen, set the API address:
+On the mobile app's API address screen (gear button on the login screen), set the API address:
 
 - Android emulator: `http://10.0.2.2:3000/api`
 - Real phone on the same Wi-Fi: `http://<your-laptop-IP>:3000/api` (e.g. `http://192.168.1.10:3000/api`)
@@ -75,8 +85,8 @@ The address is saved on the device, so switching between local and deployed need
 ```bash
 # api/
 npm run start:dev        # watch mode
-npm test                 # unit tests (game rules)
-npm run test:e2e         # health endpoint, needs the database up
+npm test                 # unit tests (game rules, auth service)
+npm run test:e2e         # health + auth endpoints, needs the seeded database and JWT_SECRET in .env
 npm run prisma:studio    # browse the data
 npm run prisma:seed      # re-run the seed (safe to repeat)
 npm run prisma:reset     # drop, re-migrate and re-seed

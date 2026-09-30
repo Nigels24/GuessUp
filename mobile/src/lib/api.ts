@@ -63,11 +63,52 @@ export async function checkHealth(): Promise<HealthResponse> {
   return data;
 }
 
-/**
- * Attach the JWT issued at login to every request (used from step 2).
- * export function setAuthToken(token: string | null) { ... }
- */
+/** Attach the JWT issued at login to every request (null removes it). */
 export function setAuthToken(token: string | null): void {
   if (token) api.defaults.headers.common.Authorization = `Bearer ${token}`;
   else delete api.defaults.headers.common.Authorization;
+}
+
+let onUnauthorized: () => void = () => {};
+
+/** AuthProvider registers its sign-out here. */
+export function setUnauthorizedHandler(handler: () => void): void {
+  onUnauthorized = handler;
+}
+
+// A 401 on a request that carried a token means the session is over (expired
+// or revoked): sign out. A 401 from the login form itself is just a wrong password.
+api.interceptors.response.use(undefined, (error: unknown) => {
+  if (
+    axios.isAxiosError(error) &&
+    error.response?.status === 401 &&
+    error.config?.headers?.Authorization
+  ) {
+    onUnauthorized();
+  }
+  return Promise.reject(error);
+});
+
+/** A message fit to show the student, from any failed request. */
+export function apiErrorMessage(error: unknown): string {
+  if (axios.isAxiosError(error)) {
+    const message = (error.response?.data as { message?: unknown } | undefined)
+      ?.message;
+    if (Array.isArray(message) && typeof message[0] === 'string')
+      return message[0];
+    if (typeof message === 'string') return message;
+    if (error.response?.status === 429) {
+      return 'Too many attempts. Please wait a minute and try again.';
+    }
+    if (error.code === 'ECONNABORTED') {
+      return 'The server took too long to respond. Please try again.';
+    }
+    if (!error.response) {
+      return 'Could not reach the server. Check the API address (⚙) and your connection.';
+    }
+    return `Request failed (${error.response.status}).`;
+  }
+  return error instanceof Error
+    ? error.message
+    : 'Something went wrong. Please try again.';
 }

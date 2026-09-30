@@ -2,26 +2,60 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* Component classes mirroring the approved prototype's styles. */
+@layer base {
+  body {
+    @apply bg-panel font-sans text-ink antialiased;
+    line-height: 1.45;
+  }
+  h1, h2, h3, h4 {
+    @apply font-display font-semibold;
+    letter-spacing: -0.01em;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+@layer components {
+  .logo-mark {
+    @apply grid h-14 w-14 shrink-0 place-items-center rounded-[18px] bg-accent font-display text-[30px] font-bold text-ink;
+    box-shadow: 0 5px 0 theme("colors.accent.shadow");
+    transform: rotate(-6deg);
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[14px] px-[18px] py-3 text-[15px] font-extrabold transition disabled:cursor-not-allowed disabled:opacity-45;
+  }
+  .btn:active:not(:disabled) {
+    transform: translateY(2px);
+  }
+  .btn-primary {
+    @apply bg-brand text-white enabled:hover:bg-brand-hover;
+    box-shadow: 0 4px 0 theme("colors.brand.dark");
+  }
+  .btn-ghost {
+    @apply border-2 border-line bg-transparent text-ink-2 hover:border-[#D5D0EE] hover:bg-white;
+  }
+  .btn-sm {
+    @apply rounded-[10px] px-3 py-[7px] text-[13px];
+    box-shadow: none;
+  }
+  .field {
+    @apply mb-3.5 flex flex-col gap-1.5;
+  }
+  .field label {
+    @apply text-[13px] font-extrabold text-ink-2;
+  }
+  .input {
+    @apply w-full rounded-xl border-2 border-line bg-white px-[13px] py-[11px] text-[15px] text-ink outline-none transition focus:border-brand;
+  }
+  .input:focus {
+    box-shadow: 0 0 0 4px rgba(108, 76, 241, 0.15);
+  }
+  .error-text {
+    @apply min-h-[18px] text-[13px] font-bold text-bad;
+  }
+  .demo-chip {
+    @apply mt-3.5 w-full cursor-pointer rounded-[14px] border-2 border-dashed border-warn-border bg-warn-soft px-3 py-2.5 text-left text-[13px] text-ink;
+  }
+  .panel {
+    @apply overflow-hidden rounded-[18px] bg-white shadow-card;
   }
 }
