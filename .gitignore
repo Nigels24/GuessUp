@@ -1,0 +1,40 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# env
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.local.example
+
+# builds
+dist/
+build/
+.next/
+out/
+*.tsbuildinfo
+
+# expo
+.expo/
+.expo-shared/
+*.apk
+*.aab
+android/
+ios/
+
+# prisma
+api/prisma/*.db
+
+# logs & os
+npm-debug.log*
+yarn-error.log*
+*.log
+.DS_Store
+Thumbs.db
+
+# editors
+.vscode/
+.idea/

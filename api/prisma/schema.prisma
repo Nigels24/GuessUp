@@ -1,0 +1,181 @@
+// GuessUp — database schema
+// Follows the Entity Relationship Diagram in Chapter III (Figure 3.6).
+// Addition to the documented ERD: StudentBadge (badges appear in the
+// Objectives and in the prototype but were not drawn in Figure 3.6).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  PICTURE
+  WORD_PUZZLE
+}
+
+enum Difficulty {
+  EASY
+  AVERAGE
+  DIFFICULT
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+/// User accounts. Passwords are hashed with bcrypt before storage.
+model User {
+  id           String     @id @default(cuid())
+  fullName     String
+  email        String     @unique
+  passwordHash String
+  role         Role       @default(STUDENT)
+  yearLevel    String?
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  sessions    GameSession[]
+  leaderboard LeaderboardEntry[]
+  badges      StudentBadge[]
+
+  @@map("users")
+}
+
+/// Subject categories: the core professional courses of the BSIT curriculum.
+model Category {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  name        String   @unique
+  icon        String
+  color       String
+  description String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  questions   Question[]
+  sessions    GameSession[]
+  leaderboard LeaderboardEntry[]
+
+  @@map("categories")
+}
+
+/// Question bank. Picture items store an image URL (local static file now,
+/// Cloudinary secure URL once uploaded from the admin panel).
+model Question {
+  id            String       @id @default(cuid())
+  categoryId    String
+  type          QuestionType
+  difficulty    Difficulty
+  questionText  String
+  codeSnippet   String?
+  imageUrl      String?
+  imagePublicId String?
+  answer        String
+  alternates    String[]     @default([])
+  choices       String[]     @default([])
+  hint          String?
+  explanation   String
+  topic         String?
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  category Category @relation(fields: [categoryId], references: [id])
+  answers  Answer[]
+
+  @@index([categoryId, difficulty, isActive])
+  @@map("questions")
+}
+
+/// One round of play.
+model GameSession {
+  id           String        @id @default(cuid())
+  userId       String
+  categoryId   String
+  difficulty   Difficulty
+  startedAt    DateTime      @default(now())
+  endedAt      DateTime?
+  totalScore   Int           @default(0)
+  correctCount Int           @default(0)
+  totalItems   Int
+  accuracy     Int           @default(0)
+  timeSpent    Int           @default(0)
+  hintsUsed    Int           @default(0)
+  status       SessionStatus @default(IN_PROGRESS)
+
+  user     User      @relation(fields: [userId], references: [id])
+  category Category  @relation(fields: [categoryId], references: [id])
+  answers  Answer[]
+
+  @@index([userId])
+  @@index([categoryId])
+  @@map("game_sessions")
+}
+
+/// One submitted answer inside a round.
+model Answer {
+  id            String   @id @default(cuid())
+  sessionId     String
+  questionId    String
+  submitted     String
+  isCorrect     Boolean
+  hintUsed      Boolean  @default(false)
+  timeTaken     Int
+  pointsEarned  Int
+  createdAt     DateTime @default(now())
+
+  session  GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question Question    @relation(fields: [questionId], references: [id])
+
+  @@index([sessionId])
+  @@index([questionId])
+  @@map("answers")
+}
+
+/// Accumulated points per student per category (per-category leaderboards).
+model LeaderboardEntry {
+  id           String   @id @default(cuid())
+  userId       String
+  categoryId   String
+  totalPoints  Int      @default(0)
+  roundsPlayed Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, categoryId])
+  @@index([categoryId, totalPoints])
+  @@map("leaderboard_entries")
+}
+
+/// Achievement badges earned by a student.
+model StudentBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeCode String
+  earnedAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeCode])
+  @@map("student_badges")
+}
