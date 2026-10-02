@@ -48,13 +48,33 @@ behavior, wording and seed content.
 - Finishing a round updates the per-category leaderboard and awards the 8 prototype badges
   (`api/src/common/badges.ts`)
 
-Not built yet: mobile gameplay screens, admin CRUD screens, leaderboard endpoints, reports.
+## Step 3B: mobile gameplay
+
+- **Timer change on the server:** `POST /answers` no longer returns the next item and no longer
+  starts its clock. The app calls `GET /game/sessions/:id/current` when the student taps
+  "Next question"; that call starts the item's clock with the full time. Time spent reading the
+  feedback and explanation is not counted. `/answers` and `/hint` on an item that was never sent
+  return 409.
+- `GET /api/me/summary` (students): total points, rounds, badges and per-category rounds,
+  accuracy and best score, from completed rounds only
+- Mobile app: Home (greeting, "Ready to guess?" card, 7 categories, recent rounds, pull to
+  refresh), bottom tabs (Ranks, Progress and Profile are placeholders except Log out on Profile),
+  level picker sheet, play screen for all three item types, feedback sheet, result screen
+- The play screen redraws from the server after an app restart or a return to the app, timer
+  included. Leaving the round (✕ or Android back) asks first, then abandons it.
+- Seeded pictures are SVG files, which React Native's `Image` cannot draw, so the app uses
+  `react-native-svg` for them
+
+Not built yet: leaderboard and progress screens, profile, admin CRUD screens, leaderboard
+endpoints, reports.
 
 ---
 
 ## Requirements
 
-- Node.js 20 or newer (Node 24 recommended; **npm 11+** — npm 10 fails to resolve the API's dev dependencies)
+- Node.js 20 or newer (Node 24 recommended; **npm 11+** — npm 10 fails to resolve the API's dev
+  dependencies and the mobile app's peer dependencies. Without npm 11 installed, use
+  `npx npm@11 install` in place of `npm install`)
 - A PostgreSQL database: local, or a free Neon project
 
 ## Setup
