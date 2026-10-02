@@ -11,6 +11,13 @@ export const colors = {
   line: '#E6E3F5',
   bg: '#F6F4FF',
   bad: '#DC2626',
+  ok: '#16A34A',
+  grayPill: '#F1F5F9',
+  grayPillText: '#475569',
+  meter: '#EEEBFA',
+  overlay: 'rgba(20, 12, 60, 0.45)',
+  /** The prototype's --shadow tint. */
+  shadow: '#2E1A8C',
   warnSoft: '#FEF3C7',
   warnBorder: '#F2C66B',
   white: '#FFFFFF',
