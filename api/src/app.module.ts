@@ -5,6 +5,7 @@ import { CategoriesModule } from './categories/categories.module.js';
 import { GameModule } from './game/game.module.js';
 import { HealthModule } from './health/health.module.js';
 import { LeaderboardModule } from './leaderboard/leaderboard.module.js';
+import { MeModule } from './me/me.module.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 
 @Module({
@@ -16,6 +17,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     CategoriesModule,
     GameModule,
     LeaderboardModule,
+    MeModule,
     // Next steps add QuestionsModule, the leaderboard endpoints and
     // ReportsModule. AuthModule's global guard protects every route they add
     // unless it is marked @Public().

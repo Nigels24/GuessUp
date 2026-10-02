@@ -41,6 +41,8 @@ describe('Gameplay (e2e)', () => {
   let tokenB: string;
   let adminToken: string;
   let progId: string;
+  /** Student A's completed round, for the summary test. */
+  let roundA: { total: number; correct: number };
 
   const auth = (token: string) => ({ Authorization: `Bearer ${token}` });
 
@@ -143,16 +145,16 @@ describe('Gameplay (e2e)', () => {
       const question = questions[i]!;
 
       if (index === 2) {
-        // Mid-round checks: restart recovery, early finish, replaying item 1.
-        const current = await request(http)
-          .get(`/api/game/sessions/${sessionId}/current`)
+        // Item 2 has not been sent yet: no clock, so no answer or hint.
+        const unsent = await request(http)
+          .post(`/api/game/sessions/${sessionId}/answers`)
           .set(auth(tokenA))
-          .expect(200);
-        expectNoAnswerFields(current.body);
-        expectSafeItem(current.body.item);
-        expect(current.body.item.index).toBe(2);
-        expect(current.body.results).toEqual([true]);
-
+          .send({ index: 2, submitted: question.answer })
+          .expect(409);
+        expect(unsent.body.message).toBe(
+          'This item has not been sent yet. Load the current item first.',
+        );
+        await request(http).post(`/api/game/sessions/${sessionId}/hint`).set(auth(tokenA)).expect(409);
         await request(http).post(`/api/game/sessions/${sessionId}/finish`).set(auth(tokenA)).expect(409);
 
         const replay = await request(http)
@@ -161,6 +163,37 @@ describe('Gameplay (e2e)', () => {
           .send({ index: 1, submitted: questions[0]!.answer })
           .expect(409);
         expect(replay.body.message).toBe('This item has already been answered.');
+      }
+
+      if (index > 1) {
+        // The app asks for the next item after the feedback; this starts its clock.
+        const current = await request(http)
+          .get(`/api/game/sessions/${sessionId}/current`)
+          .set(auth(tokenA))
+          .expect(200);
+        expectNoAnswerFields(current.body);
+        expectSafeItem(current.body.item);
+        expect(current.body.item.index).toBe(index);
+        expect(current.body.item.questionText).toBe(question.questionText);
+        expect(current.body.results).toHaveLength(index - 1);
+        // Full time, give or take a second of network latency.
+        expect(current.body.secondsRemaining).toBeGreaterThanOrEqual(level.seconds - 1);
+        const served = await prisma.gameSession.findUniqueOrThrow({ where: { id: sessionId } });
+        expect(served.currentServedAt).not.toBeNull();
+
+        if (index === 2) {
+          expect(current.body.results).toEqual([true]);
+          // Asking again (app restarted) returns the same item and does not restart the clock.
+          await rewindClock(sessionId, 7);
+          const again = await request(http)
+            .get(`/api/game/sessions/${sessionId}/current`)
+            .set(auth(tokenA))
+            .expect(200);
+          expect(again.body.item.index).toBe(2);
+          expect(again.body.item.questionText).toBe(question.questionText);
+          expect(again.body.secondsRemaining).toBeLessThanOrEqual(level.seconds - 7);
+          expect(again.body.secondsRemaining).toBeGreaterThanOrEqual(level.seconds - 8);
+        }
       }
 
       if (step.hint) {
@@ -181,21 +214,23 @@ describe('Gameplay (e2e)', () => {
 
       const expectedPoints = scoreAnswer('EASY', step.correct, level.seconds - THINK_SECONDS, step.hint);
       expectedTotal += expectedPoints;
-      expect(res.body).toMatchObject({
+      expect(res.body).toEqual({
+        index,
         isCorrect: step.correct,
         timedOut: false,
         correctAnswer: question.answer,
         explanation: question.explanation,
         pointsEarned: expectedPoints,
         totalScore: expectedTotal,
+        correctCount: plan.slice(0, index).filter((p) => p.correct).length,
+        answeredCount: index,
+        totalItems: ROUND_SIZE,
         isLastItem: index === ROUND_SIZE,
       });
-      if (index < ROUND_SIZE) {
-        expectSafeItem(res.body.nextItem);
-        expect(res.body.nextItem.index).toBe(index + 1);
-      } else {
-        expect(res.body.nextItem).toBeNull();
-      }
+
+      // Answering stops the clock; the next item's clock waits for GET /current.
+      const after = await prisma.gameSession.findUniqueOrThrow({ where: { id: sessionId } });
+      expect(after.currentServedAt).toBeNull();
     }
 
     // Stored answers match scoreAnswer's output.
@@ -204,6 +239,9 @@ describe('Gameplay (e2e)', () => {
       plan.map((p) => scoreAnswer('EASY', p.correct, level.seconds - THINK_SECONDS, p.hint)),
     );
     expect(stored.map((a) => a.hintUsed)).toEqual(plan.map((p) => p.hint));
+
+    // Nothing left to send once every item is answered.
+    await request(http).get(`/api/game/sessions/${sessionId}/current`).set(auth(tokenA)).expect(409);
 
     // Replaying the last item after the round is fully answered.
     await request(http)
@@ -228,6 +266,7 @@ describe('Gameplay (e2e)', () => {
       timeSpent: ROUND_SIZE * THINK_SECONDS,
     });
     expect(finish.body.newBadges.map((b: { code: string }) => b.code)).toContain('first_round');
+    roundA = { total: expectedTotal, correct: 3 };
     expect(finish.body.rankInCategory).toBeGreaterThanOrEqual(1);
     expect(finish.body.totalPlayersInCategory).toBeGreaterThanOrEqual(finish.body.rankInCategory);
     expect(finish.body.review).toHaveLength(ROUND_SIZE);
@@ -271,7 +310,7 @@ describe('Gameplay (e2e)', () => {
     expect(history.body).toHaveLength(1);
     expect(history.body[0]).toMatchObject({ id: sessionId, totalScore: expectedTotal, accuracy: 60 });
     await request(http).get('/api/game/history?limit=0').set(auth(tokenA)).expect(400);
-  });
+  }, 30_000); // about 50 requests against the remote database
 
   it('an answer after the time limit is a timeout: 0 points and incorrect', async () => {
     const start = await request(http)
@@ -334,6 +373,42 @@ describe('Gameplay (e2e)', () => {
 
     const entries = await prisma.leaderboardEntry.count({ where: { user: { email: emails[1] } } });
     expect(entries).toBe(0);
+  });
+
+  it('GET /api/me/summary counts completed rounds only and lists every category', async () => {
+    const res = await request(http).get('/api/me/summary').set(auth(tokenA)).expect(200);
+    expect(res.body).toMatchObject({ totalPoints: roundA.total, roundsPlayed: 1 });
+    expect(res.body.badges).toContainEqual({
+      code: 'first_round',
+      icon: expect.any(String),
+      name: 'First Steps',
+      earnedAt: expect.any(String),
+    });
+    expect(res.body.perCategory).toHaveLength(7);
+    for (const row of res.body.perCategory) {
+      expect(row).toEqual(
+        row.categoryId === progId
+          ? {
+              categoryId: progId,
+              name: expect.any(String),
+              roundsPlayed: 1,
+              accuracy: (roundA.correct / ROUND_SIZE) * 100,
+              bestScore: roundA.total,
+            }
+          : { categoryId: expect.any(String), name: expect.any(String), roundsPlayed: 0, accuracy: 0, bestScore: 0 },
+      );
+    }
+
+    // Student B only has abandoned rounds (one with an answered item): nothing counts.
+    const answeredB = await prisma.answer.count({ where: { session: { user: { email: emails[1] } } } });
+    expect(answeredB).toBeGreaterThan(0);
+    const b = await request(http).get('/api/me/summary').set(auth(tokenB)).expect(200);
+    expect(b.body).toMatchObject({ totalPoints: 0, roundsPlayed: 0, badges: [] });
+    expect(b.body.perCategory).toHaveLength(7);
+    expect(b.body.perCategory.every((r: { roundsPlayed: number }) => r.roundsPlayed === 0)).toBe(true);
+
+    await request(http).get('/api/me/summary').set(auth(adminToken)).expect(403);
+    await request(http).get('/api/me/summary').expect(401);
   });
 
   it('rejects bad starts and non-students', async () => {

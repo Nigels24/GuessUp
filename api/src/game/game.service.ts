@@ -32,6 +32,7 @@ export const GAME_MESSAGES = {
   allAnswered: 'Every item is answered. Finish the round to see your results.',
   alreadyAnswered: 'This item has already been answered.',
   notCurrentItem: 'That is not the current item of this round.',
+  notServed: 'This item has not been sent yet. Load the current item first.',
   noHints: 'Hints are not allowed on this level.',
   hintUsed: 'You already used the hint for this item.',
   notAllAnswered: 'Answer every item before finishing the round.',
@@ -112,14 +113,29 @@ export class GameService {
 
   /* ---------- GET /game/sessions/:id/current ---------- */
 
+  /**
+   * Sends the next unanswered item and starts its clock the first time it is
+   * sent. Calling it again for the same item returns that item with the time
+   * left; it never restarts the clock.
+   */
   async current(user: PublicUser, sessionId: string): Promise<RoundState> {
     let session = await this.playableSession(user, sessionId);
     if (!session.currentServedAt) {
-      session = await this.prisma.gameSession.update({
-        where: { id: session.id },
+      // Conditional, so two concurrent calls agree on one start time.
+      await this.prisma.gameSession.updateMany({
+        where: {
+          id: session.id,
+          status: 'IN_PROGRESS',
+          currentIndex: session.currentIndex,
+          currentServedAt: null,
+        },
         data: { currentServedAt: new Date() },
+      });
+      session = await this.prisma.gameSession.findUniqueOrThrow({
+        where: { id: session.id },
         include: { category: { select: CATEGORY_REF } },
       });
+      if (session.status !== 'IN_PROGRESS') throw new ConflictException(GAME_MESSAGES.roundOver);
     }
     const answers = await this.prisma.answer.findMany({
       where: { sessionId: session.id },
@@ -136,6 +152,7 @@ export class GameService {
 
   async hint(user: PublicUser, sessionId: string): Promise<{ hint: string }> {
     const session = await this.playableSession(user, sessionId);
+    if (!session.currentServedAt) throw new ConflictException(GAME_MESSAGES.notServed);
     if (!LEVELS[session.difficulty].hints) throw new ForbiddenException(GAME_MESSAGES.noHints);
     if (session.currentHintUsed) throw new ForbiddenException(GAME_MESSAGES.hintUsed);
 
@@ -146,6 +163,7 @@ export class GameService {
         id: session.id,
         status: 'IN_PROGRESS',
         currentIndex: session.currentIndex,
+        currentServedAt: { not: null },
         currentHintUsed: false,
       },
       data: { currentHintUsed: true },
@@ -165,6 +183,8 @@ export class GameService {
         dto.index < expectedIndex ? GAME_MESSAGES.alreadyAnswered : GAME_MESSAGES.notCurrentItem,
       );
     }
+    const servedAt = session.currentServedAt;
+    if (!servedAt) throw new ConflictException(GAME_MESSAGES.notServed);
 
     const question = await this.question(session.itemIds[session.currentIndex]!);
     const now = new Date();
@@ -172,12 +192,12 @@ export class GameService {
       question,
       difficulty: session.difficulty,
       submitted: dto.submitted,
-      elapsedMs: now.getTime() - (session.currentServedAt ?? now).getTime(),
+      elapsedMs: now.getTime() - servedAt.getTime(),
       hintUsed: session.currentHintUsed,
     });
     const isLastItem = expectedIndex === session.totalItems;
 
-    const totalScore = await this.prisma.$transaction(async (tx) => {
+    const totals = await this.prisma.$transaction(async (tx) => {
       // Claim this item: only succeeds while it is still the current one.
       const claimed = await tx.gameSession.updateMany({
         where: { id: session.id, status: 'IN_PROGRESS', currentIndex: session.currentIndex },
@@ -185,8 +205,9 @@ export class GameService {
           currentIndex: { increment: 1 },
           totalScore: { increment: judgement.pointsEarned },
           currentHintUsed: false,
-          // The next item's clock starts now; nothing is left to time after the last one.
-          currentServedAt: isLastItem ? null : now,
+          // The next item's clock starts only when GET /current sends it, so time
+          // spent reading the feedback and explanation is not counted.
+          currentServedAt: null,
         },
       });
       if (claimed.count !== 1) throw new ConflictException(GAME_MESSAGES.alreadyAnswered);
@@ -202,27 +223,29 @@ export class GameService {
           pointsEarned: judgement.pointsEarned,
         },
       });
-      const updated = await tx.gameSession.findUniqueOrThrow({
-        where: { id: session.id },
-        select: { totalScore: true },
-      });
-      return updated.totalScore;
+      const [updated, correctCount] = await Promise.all([
+        tx.gameSession.findUniqueOrThrow({
+          where: { id: session.id },
+          select: { totalScore: true },
+        }),
+        tx.answer.count({ where: { sessionId: session.id, isCorrect: true } }),
+      ]);
+      return { totalScore: updated.totalScore, correctCount };
     });
 
-    const nextItem = isLastItem
-      ? null
-      : toItemDto(await this.question(session.itemIds[expectedIndex]!), expectedIndex + 1);
-
     return {
+      index: expectedIndex,
       isCorrect: judgement.isCorrect,
       timedOut: judgement.timedOut,
       // Revealed only now, after the answer, as in the prototype.
       correctAnswer: question.answer,
       explanation: question.explanation,
       pointsEarned: judgement.pointsEarned,
-      totalScore,
+      totalScore: totals.totalScore,
+      correctCount: totals.correctCount,
+      answeredCount: expectedIndex,
+      totalItems: session.totalItems,
       isLastItem,
-      nextItem,
     };
   }
 

@@ -33,15 +33,25 @@ export interface RoundState {
   item: ItemDto;
 }
 
+/**
+ * The result of the answer just submitted. It does not carry the next item:
+ * the app asks GET /current for it, which starts that item's clock.
+ */
 export interface AnswerResult {
+  /** 1-based position of the item just answered. */
+  index: number;
   isCorrect: boolean;
   timedOut: boolean;
   correctAnswer: string;
   explanation: string;
   pointsEarned: number;
+  /** Running totals for the round so far. */
   totalScore: number;
+  correctCount: number;
+  answeredCount: number;
+  totalItems: number;
+  /** Every item is answered: the app calls POST /finish next. */
   isLastItem: boolean;
-  nextItem: ItemDto | null;
 }
 
 export interface SessionSummary {

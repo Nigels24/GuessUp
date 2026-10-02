@@ -26,7 +26,10 @@ export class GameController {
     return this.game.start(user, dto);
   }
 
-  /** GET /api/game/sessions/:id/current — re-send the current item (app restarted mid-round). */
+  /**
+   * GET /api/game/sessions/:id/current — the next unanswered item. Starts its
+   * clock the first time it is sent; later calls return the time left.
+   */
   @Get('sessions/:id/current')
   current(@CurrentUser() user: PublicUser, @Param('id') id: string): Promise<RoundState> {
     return this.game.current(user, id);
@@ -39,7 +42,7 @@ export class GameController {
     return this.game.hint(user, id);
   }
 
-  /** POST /api/game/sessions/:id/answers */
+  /** POST /api/game/sessions/:id/answers — judges the sent item; GET /current gives the next one. */
   @Post('sessions/:id/answers')
   @HttpCode(HttpStatus.OK)
   answer(
