@@ -1,6 +1,6 @@
 /**
- * Signed-in screens: the bottom tabs, and the play screen above them (no tab
- * bar while a round is being played).
+ * Signed-in screens: the bottom tabs, and the play and result screens above
+ * them (no tab bar while a round is being played or reviewed).
  */
 import { Stack } from 'expo-router';
 import { colors } from '../../src/theme';
@@ -15,6 +15,7 @@ export default function GroupLayout() {
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="play/[sessionId]" options={{ gestureEnabled: false }} />
+      <Stack.Screen name="result/[sessionId]" />
     </Stack>
   );
 }

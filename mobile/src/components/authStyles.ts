@@ -41,8 +41,6 @@ export const authStyles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 3,
   },
-  eye: { paddingHorizontal: 8, paddingVertical: 6 },
-  eyeText: { fontSize: 13, fontWeight: '800', color: colors.brand },
   alt: { textAlign: 'center', marginTop: 16, fontSize: 14, color: colors.ink },
   altLink: { fontWeight: '800', color: colors.brand },
 });

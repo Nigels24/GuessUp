@@ -1,26 +1,30 @@
 /**
  * Home (the prototype's #/s/home): greeting, the "Ready to guess?" card with
  * the student's totals, the subject categories and the latest rounds.
- * Tapping a category opens the level picker. Data reloads whenever the tab
+ * Tapping a category opens the level picker; tapping a recent round opens
+ * its result. Data reloads whenever the tab
  * comes into focus (e.g. back from a round) and on pull to refresh.
  */
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import {
-  Alert,
-  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  ToastAndroid,
   View,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { bottomNavSpace } from '../../../src/components/BottomNav';
 import { LevelSheet } from '../../../src/components/LevelSheet';
-import { Avatar, ErrorText, ErrorView, LoadingView } from '../../../src/components/ui';
+import {
+  Avatar,
+  ErrorText,
+  ErrorView,
+  LoadingView,
+  showToast,
+} from '../../../src/components/ui';
 import { apiErrorMessage } from '../../../src/lib/api';
 import { useAuth } from '../../../src/lib/auth-context';
 import { ago, greeting, num, tint } from '../../../src/lib/format';
@@ -86,9 +90,7 @@ export default function HomeScreen() {
 
   function openCategory(category: Category) {
     if (!category.activeQuestionCount) {
-      const message = 'No questions in this category yet.';
-      if (Platform.OS === 'android') ToastAndroid.show(message, ToastAndroid.SHORT);
-      else Alert.alert(message);
+      showToast('No questions in this category yet.');
       return;
     }
     setSheetCategory(category);
@@ -247,7 +249,13 @@ function CategoryCard({
 function HistoryRow({ round, first }: { round: HistoryEntry; first: boolean }) {
   const good = round.accuracy >= 60;
   return (
-    <View style={[s.histRow, !first && s.histDivider]}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={() =>
+        router.push({ pathname: '/result/[sessionId]', params: { sessionId: round.id } })
+      }
+      style={({ pressed }) => [s.histRow, !first && s.histDivider, pressed && s.histPressed]}
+    >
       <View style={[s.histIcon, { backgroundColor: tint(round.category.color, '1f') }]}>
         <Text style={s.histIconText}>{round.category.icon}</Text>
       </View>
@@ -265,7 +273,7 @@ function HistoryRow({ round, first }: { round: HistoryEntry; first: boolean }) {
           {round.accuracy}%
         </Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -371,6 +379,7 @@ const s = StyleSheet.create({
   },
   histRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
   histDivider: { borderTopWidth: 1, borderTopColor: colors.line },
+  histPressed: { opacity: 0.6 },
   histIcon: {
     width: 40,
     height: 40,

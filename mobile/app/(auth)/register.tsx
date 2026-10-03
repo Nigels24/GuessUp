@@ -15,6 +15,7 @@ import { authStyles as login } from '../../src/components/authStyles';
 import {
   ErrorText,
   Field,
+  PasswordField,
   PrimaryButton,
   styles as ui,
 } from '../../src/components/ui';
@@ -131,21 +132,19 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            <Field
+            <PasswordField
               label="Password"
               value={password}
               onChangeText={setPassword}
               placeholder="At least 8 characters"
-              secureTextEntry
               autoCapitalize="none"
               autoComplete="new-password"
               textContentType="newPassword"
             />
-            <Field
+            <PasswordField
               label="Confirm password"
               value={confirm}
               onChangeText={setConfirm}
-              secureTextEntry
               autoCapitalize="none"
               autoComplete="new-password"
               textContentType="newPassword"

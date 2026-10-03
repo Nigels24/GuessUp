@@ -184,3 +184,139 @@ export async function startRound(
   });
   return data;
 }
+
+/* ---------- playing a round ---------- */
+
+/** POST /game/sessions/:id/answers: the result of the item just answered. */
+export interface AnswerResult {
+  /** 1-based position of the item just answered. */
+  index: number;
+  isCorrect: boolean;
+  /** Judged by the server's clock (time limit plus a 2 s grace). */
+  timedOut: boolean;
+  correctAnswer: string;
+  explanation: string;
+  pointsEarned: number;
+  totalScore: number;
+  correctCount: number;
+  answeredCount: number;
+  totalItems: number;
+  /** Every item is answered: finish the round next. */
+  isLastItem: boolean;
+}
+
+export interface SessionSummary {
+  id: string;
+  category: CategoryRef;
+  difficulty: Difficulty;
+  status: 'IN_PROGRESS' | 'COMPLETED' | 'ABANDONED';
+  startedAt: string;
+  endedAt: string | null;
+  totalScore: number;
+  correctCount: number;
+  totalItems: number;
+  /** 0–100 */
+  accuracy: number;
+  /** Seconds */
+  timeSpent: number;
+  hintsUsed: number;
+}
+
+export interface ReviewItem {
+  index: number;
+  type: QuestionType;
+  questionText: string;
+  /** Empty when the time ran out. */
+  submitted: string;
+  correctAnswer: string;
+  explanation: string;
+  isCorrect: boolean;
+  timeTaken: number;
+  hintUsed: boolean;
+  pointsEarned: number;
+}
+
+/** GET /game/sessions/:id: a completed round */
+export interface SessionResult {
+  session: SessionSummary;
+  rankInCategory: number | null;
+  totalPlayersInCategory: number;
+  review: ReviewItem[];
+}
+
+export interface NewBadge {
+  code: string;
+  icon: string;
+  name: string;
+  description: string;
+}
+
+/** POST /game/sessions/:id/finish */
+export interface FinishResult extends SessionResult {
+  newBadges: NewBadge[];
+}
+
+/**
+ * The next unanswered item. Starts its clock the first time it is sent;
+ * asking again returns the same item with the time left. 409 once every
+ * item is answered or the round is over.
+ */
+export async function fetchCurrent(sessionId: string): Promise<RoundState> {
+  const { data } = await api.get<RoundState>(`/game/sessions/${sessionId}/current`);
+  return data;
+}
+
+export async function requestHint(sessionId: string): Promise<string> {
+  const { data } = await api.post<{ hint: string }>(`/game/sessions/${sessionId}/hint`);
+  return data.hint;
+}
+
+/** `submitted` undefined means the timer ran out. */
+export async function submitAnswer(
+  sessionId: string,
+  index: number,
+  submitted: string | undefined,
+): Promise<AnswerResult> {
+  const { data } = await api.post<AnswerResult>(`/game/sessions/${sessionId}/answers`, {
+    index,
+    ...(submitted === undefined ? {} : { submitted }),
+  });
+  return data;
+}
+
+export async function finishRound(sessionId: string): Promise<FinishResult> {
+  const { data } = await api.post<FinishResult>(`/game/sessions/${sessionId}/finish`);
+  return data;
+}
+
+export async function abandonRound(sessionId: string): Promise<void> {
+  await api.post(`/game/sessions/${sessionId}/abandon`);
+}
+
+export async function fetchRound(sessionId: string): Promise<SessionResult> {
+  const { data } = await api.get<SessionResult>(`/game/sessions/${sessionId}`);
+  return data;
+}
+
+/*
+ * The result screen loads the round with GET /game/sessions/:id, which does
+ * not list the badges earned by it. The play screen keeps the /finish
+ * response here so the result screen can show them right after the round.
+ */
+const justFinished = new Map<string, FinishResult>();
+
+export function rememberFinished(result: FinishResult): void {
+  justFinished.set(result.session.id, result);
+}
+
+/** The /finish response for this round, if it was finished since the app started. */
+export function finishedResult(sessionId: string): FinishResult | null {
+  return justFinished.get(sessionId) ?? null;
+}
+
+/** Full URL of a question picture; the API stores "/static/images/x.svg". */
+export function imageSource(imageUrl: string): string {
+  if (/^https?:\/\//i.test(imageUrl)) return imageUrl;
+  const base = (api.defaults.baseURL ?? '').replace(/\/+$/, '').replace(/\/api$/, '');
+  return `${base}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+}

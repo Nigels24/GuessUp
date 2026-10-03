@@ -37,3 +37,11 @@ export function greeting(date = new Date()): string {
 export function tint(color: string, alpha: string): string {
   return /^#[0-9a-f]{6}$/i.test(color) ? color + alpha : color;
 }
+
+/** 75 -> "1m 15s", 42 -> "42s" */
+export function dur(seconds: number): string {
+  const sec = Math.round(seconds);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return m ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
+}

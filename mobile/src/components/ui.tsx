@@ -3,17 +3,21 @@
  * .logo-mark, .field, .input, .btn-primary, .error-text, .demo-chip, .avatar,
  * .pill, .topbar-s and .empty.
  */
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
   TextInput,
+  ToastAndroid,
   View,
   type TextInputProps,
 } from 'react-native';
-import { initials } from '../lib/format';
+import { initials, tint } from '../lib/format';
 import { colors } from '../theme';
 
 export function LogoMark({ size = 72 }: { size?: number }) {
@@ -53,12 +57,39 @@ export function Field({
           style={[
             styles.input,
             focused && styles.inputFocused,
-            right ? { paddingRight: 64 } : null,
+            right ? { paddingRight: 54 } : null,
           ]}
         />
         {right ? <View style={styles.inputRight}>{right}</View> : null}
       </View>
     </View>
+  );
+}
+
+/** A Field for passwords, with an eye button that shows or hides the text. */
+export function PasswordField(
+  props: Omit<TextInputProps, 'secureTextEntry'> & { label: string },
+) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <Field
+      {...props}
+      secureTextEntry={!visible}
+      right={
+        <Pressable
+          onPress={() => setVisible((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={visible ? 'Hide password' : 'Show password'}
+          style={styles.eye}
+        >
+          <Ionicons
+            name={visible ? 'eye-off-outline' : 'eye-outline'}
+            size={22}
+            color={colors.muted}
+          />
+        </Pressable>
+      }
+    />
   );
 }
 
@@ -137,6 +168,70 @@ export function DemoChip({
   );
 }
 
+/** A short message (the prototype's toast): a toast on Android, an alert elsewhere. */
+export function showToast(message: string): void {
+  if (Platform.OS === 'android') ToastAndroid.show(message, ToastAndroid.SHORT);
+  else Alert.alert(message);
+}
+
+/**
+ * The prototype's .btn in its primary, ok (green) and ghost styles. Unlike
+ * PrimaryButton it has no slow-server note, for actions inside a screen.
+ */
+export function Button({
+  title,
+  onPress,
+  variant = 'primary',
+  disabled = false,
+  loading = false,
+  small = false,
+  style,
+}: {
+  title: React.ReactNode;
+  onPress: () => void;
+  variant?: 'primary' | 'ok' | 'ghost';
+  disabled?: boolean;
+  loading?: boolean;
+  small?: boolean;
+  style?: object;
+}) {
+  const ghost = variant === 'ghost';
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: disabled || loading }}
+      disabled={disabled || loading}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.btn,
+        small && styles.btnSmall,
+        variant === 'primary' && styles.btnPrimary,
+        variant === 'ok' && styles.btnOk,
+        ghost && styles.btnGhost,
+        pressed && !ghost && styles.buttonPressed,
+        disabled && styles.btnDisabled,
+        style,
+      ]}
+    >
+      {loading && (
+        <ActivityIndicator
+          color={ghost ? colors.brand : colors.white}
+          style={{ marginRight: 8 }}
+        />
+      )}
+      <Text
+        style={[
+          styles.btnText,
+          small && styles.btnTextSmall,
+          { color: ghost ? colors.ink2 : colors.white },
+        ]}
+      >
+        {title}
+      </Text>
+    </Pressable>
+  );
+}
+
 /** Initials on a brand square (the prototype's .avatar / .avatar-lg). */
 export function Avatar({ name, size = 44 }: { name: string | undefined; size?: number }) {
   return (
@@ -153,19 +248,28 @@ export function Avatar({ name, size = 44 }: { name: string | undefined; size?: n
   );
 }
 
+/** The prototype's .pill; `color` gives a level pill (tinted background, colored text). */
 export function Pill({
   children,
   tone = 'gray',
+  color,
 }: {
   children: React.ReactNode;
   tone?: 'gray' | 'brand';
+  color?: string;
 }) {
   return (
-    <View style={[styles.pill, tone === 'brand' ? styles.pillBrand : styles.pillGray]}>
+    <View
+      style={[
+        styles.pill,
+        tone === 'brand' ? styles.pillBrand : styles.pillGray,
+        color ? { backgroundColor: tint(color, '22') } : null,
+      ]}
+    >
       <Text
         style={[
           styles.pillText,
-          { color: tone === 'brand' ? colors.brandDark : colors.grayPillText },
+          { color: color ?? (tone === 'brand' ? colors.brandDark : colors.grayPillText) },
         ]}
       >
         {children}
@@ -264,6 +368,12 @@ export const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
   },
+  eye: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   error: {
     color: colors.bad,
     fontSize: 13,
@@ -302,6 +412,33 @@ export const styles = StyleSheet.create({
   },
   demoText: { fontSize: 13, color: colors.ink },
   bold: { fontWeight: '800' },
+  btn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+  },
+  btnSmall: { paddingVertical: 7, paddingHorizontal: 12, borderRadius: 10 },
+  btnPrimary: {
+    backgroundColor: colors.brand,
+    borderBottomWidth: 4,
+    borderBottomColor: colors.brandDark,
+  },
+  btnOk: {
+    backgroundColor: colors.ok,
+    borderBottomWidth: 4,
+    borderBottomColor: colors.okDark,
+  },
+  btnGhost: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: colors.line,
+  },
+  btnDisabled: { opacity: 0.45 },
+  btnText: { fontWeight: '800', fontSize: 15 },
+  btnTextSmall: { fontSize: 13 },
   avatar: {
     backgroundColor: colors.brand,
     alignItems: 'center',

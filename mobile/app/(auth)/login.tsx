@@ -16,6 +16,7 @@ import {
   ErrorText,
   Field,
   LogoMark,
+  PasswordField,
   PrimaryButton,
 } from '../../src/components/ui';
 import { apiErrorMessage } from '../../src/lib/api';
@@ -28,7 +29,6 @@ export default function LoginScreen() {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -83,27 +83,15 @@ export default function LoginScreen() {
               autoComplete="email"
               textContentType="username"
             />
-            <Field
+            <PasswordField
               label="Password"
               value={password}
               onChangeText={setPassword}
               placeholder="••••••••"
-              secureTextEntry={!showPassword}
               autoCapitalize="none"
               autoComplete="current-password"
               textContentType="password"
               onSubmitEditing={() => void submit()}
-              right={
-                <Pressable
-                  onPress={() => setShowPassword((v) => !v)}
-                  hitSlop={8}
-                  style={s.eye}
-                >
-                  <Text style={s.eyeText}>
-                    {showPassword ? 'Hide' : 'Show'}
-                  </Text>
-                </Pressable>
-              }
             />
             <ErrorText>{error}</ErrorText>
             <PrimaryButton
