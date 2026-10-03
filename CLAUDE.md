@@ -14,7 +14,7 @@ GuessUp: a gamified guessing game for IT students (capstone project, final defen
 
 `docs/prototype/GuessUp-Prototype.html` is the approved prototype and the reference for behavior, wording, and seed content.
 
-**The README runs ahead of the code.** Its "Step 3B: mobile gameplay" section describes mobile features that are not implemented yet: the play, level-picker, and result screens and the Home layout it lists. Its API part is done: `/current` starts the clock, and `GET /api/me/summary` exists. Check the source before you assume something from the README exists.
+The README's step sections (3A, 3B, 4) describe what is built; its "Not built yet" line lists what is not (admin CRUD screens, reports). Check the source before you assume something from the README exists.
 
 ## Commands
 
@@ -50,7 +50,8 @@ npm run build:apk
   - The client never receives the answer, alternates, explanation, or hint before it answers. This is a security boundary: the e2e tests check it with `allKeys()`.
   - Item clock: `GameSession.currentServedAt`. Starting a round serves item 1. `POST /answers` sets the field back to null, and `GET /current` serves the next item and starts its clock, once per item. While it is null, `/answers` and `/hint` return 409.
   - Race and replay safety: state transitions use `updateMany` with a status/version-style `where` inside `$transaction`, and a `count !== 1` result throws `ConflictException` (409). Use the same pattern for new transitions.
-  - Finishing a round updates `LeaderboardEntry` and awards badges in the same transaction. `LeaderboardService.categoryRanking` computes ranks, but there are no leaderboard endpoints yet.
+  - Finishing a round updates `LeaderboardEntry` and awards badges in the same transaction. `LeaderboardService.categoryRanking` computes ranks; `GET /leaderboard/:categoryId` returns the top 50 plus the caller's row.
+  - `me/me.summary.ts` and `me/me.progress.ts` are the pure builders behind `/me/summary` and `/me/progress` (unit-tested). `PATCH /me` and `POST /me/password` are the profile endpoints; a wrong current password is a 400 because both clients sign out on 401.
 - Prisma: the migrations in `prisma/migrations/` are the only source of truth for the schema. Deploy uses `prisma migrate deploy`. The `student_badges` table is in the schema but not in the thesis ERD.
 - Seed (`prisma/seed.ts`, `prisma/seed-data/`): it upserts questions on a stable `seedKey` (`<category>-<difficulty>-<nn>`). It aborts unless there are exactly 7 categories and 105 questions, with 5 per category × difficulty. Picture-question images are SVGs in `api/public/images/`.
 

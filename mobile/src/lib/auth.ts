@@ -102,3 +102,22 @@ export async function fetchMe(): Promise<User> {
   const { data } = await api.get<User>('/auth/me');
   return data;
 }
+
+/** Keep the saved copy of the user in step after a profile change. */
+export async function saveUser(user: User): Promise<void> {
+  await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user)).catch(() => undefined);
+}
+
+/** PATCH /me: the prototype's Edit profile. Returns the updated user. */
+export async function updateProfile(input: {
+  fullName: string;
+  yearLevel: YearLevel;
+}): Promise<User> {
+  const { data } = await api.patch<User>('/me', input);
+  return data;
+}
+
+/** POST /me/password. A wrong current password is a 400 with the prototype's message. */
+export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  await api.post('/me/password', { currentPassword, newPassword });
+}

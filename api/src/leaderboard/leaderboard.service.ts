@@ -1,6 +1,10 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { accuracyPercent } from '../common/game-rules.js';
+import type { CategoryRef } from '../game/game.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+
+/** How many rows GET /leaderboard/:categoryId lists. */
+export const LEADERBOARD_SIZE = 50;
 
 export interface RankingRow {
   rank: number;
@@ -12,10 +16,20 @@ export interface RankingRow {
   accuracy: number;
 }
 
+export interface Leaderboard {
+  category: CategoryRef;
+  /** Number of ranked students in the category (may exceed `rows`). */
+  totalPlayers: number;
+  /** The top LEADERBOARD_SIZE rows. */
+  rows: RankingRow[];
+  /** The caller's own row, also when outside `rows`; null when not ranked (or an administrator). */
+  me: RankingRow | null;
+}
+
 /**
  * Per-category rankings (the prototype's leaderboard): active students only,
- * ordered by total points, then accuracy. The leaderboard endpoints come in a
- * later step; for now the finish endpoint uses this to report the rank.
+ * ordered by total points, then accuracy. Used by GET /leaderboard/:categoryId
+ * and by the finish endpoint to report the rank.
  */
 @Injectable()
 export class LeaderboardService {
@@ -57,6 +71,22 @@ export class LeaderboardService {
           a.fullName.localeCompare(b.fullName),
       )
       .map((row, i) => ({ rank: i + 1, ...row }));
+  }
+
+  /** GET /leaderboard/:categoryId — 404 for an unknown category. */
+  async board(categoryId: string, userId: string): Promise<Leaderboard> {
+    const category = await this.prisma.category.findUnique({
+      where: { id: categoryId },
+      select: { id: true, slug: true, name: true, icon: true, color: true },
+    });
+    if (!category) throw new NotFoundException('Category not found.');
+    const ranking = await this.categoryRanking(categoryId);
+    return {
+      category,
+      totalPlayers: ranking.length,
+      rows: ranking.slice(0, LEADERBOARD_SIZE),
+      me: ranking.find((row) => row.userId === userId) ?? null,
+    };
   }
 
   /** The student's rank in a category (null when not ranked) and the number of ranked players. */

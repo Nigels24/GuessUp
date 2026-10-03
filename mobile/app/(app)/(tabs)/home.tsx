@@ -4,9 +4,11 @@
  * Tapping a category opens the level picker; tapping a recent round opens
  * its result. Data reloads whenever the tab
  * comes into focus (e.g. back from a round) and on pull to refresh.
+ * `?cat=<id>` (the prototype's #/s/home?cat=, used by "Play now" and
+ * "Practice" on other tabs) opens the level picker for that category.
  */
-import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -18,6 +20,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { bottomNavSpace } from '../../../src/components/BottomNav';
 import { LevelSheet } from '../../../src/components/LevelSheet';
+import { HistoryRow } from '../../../src/components/rows';
 import {
   Avatar,
   ErrorText,
@@ -27,13 +30,11 @@ import {
 } from '../../../src/components/ui';
 import { apiErrorMessage } from '../../../src/lib/api';
 import { useAuth } from '../../../src/lib/auth-context';
-import { ago, greeting, num, tint } from '../../../src/lib/format';
+import { greeting, num, tint } from '../../../src/lib/format';
 import {
-  TOTAL_BADGES,
   fetchCategories,
   fetchHistory,
   fetchSummary,
-  levelInfo,
   type Category,
   type HistoryEntry,
   type MeSummary,
@@ -58,6 +59,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [sheetCategory, setSheetCategory] = useState<Category | null>(null);
   const latest = useRef(0);
+  const { cat } = useLocalSearchParams<{ cat?: string }>();
 
   const load = useCallback(async (mode: 'quiet' | 'refresh') => {
     const id = ++latest.current;
@@ -88,13 +90,21 @@ export default function HomeScreen() {
     }, [load]),
   );
 
-  function openCategory(category: Category) {
+  const openCategory = useCallback((category: Category) => {
     if (!category.activeQuestionCount) {
       showToast('No questions in this category yet.');
       return;
     }
     setSheetCategory(category);
-  }
+  }, []);
+
+  // Opened with ?cat=: show that category's level picker once, then forget the param.
+  useEffect(() => {
+    if (!cat || !data) return;
+    const category = data.categories.find((c) => c.id === cat);
+    router.setParams({ cat: undefined });
+    if (category) openCategory(category);
+  }, [cat, data, openCategory]);
 
   if (!data) {
     return (
@@ -149,7 +159,10 @@ export default function HomeScreen() {
           <View style={s.heroStats}>
             <HeroStat value={num(summary.totalPoints)} label="Total points" />
             <HeroStat value={String(summary.roundsPlayed)} label="Rounds" />
-            <HeroStat value={`${summary.badges.length}/${TOTAL_BADGES}`} label="Badges" />
+            <HeroStat
+              value={`${summary.badges.length}/${summary.allBadges.length}`}
+              label="Badges"
+            />
           </View>
         </View>
 
@@ -241,37 +254,6 @@ function CategoryCard({
       </Text>
       <View style={s.meter}>
         <View style={[s.meterFill, { width: `${accuracy}%`, backgroundColor: category.color }]} />
-      </View>
-    </Pressable>
-  );
-}
-
-function HistoryRow({ round, first }: { round: HistoryEntry; first: boolean }) {
-  const good = round.accuracy >= 60;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() =>
-        router.push({ pathname: '/result/[sessionId]', params: { sessionId: round.id } })
-      }
-      style={({ pressed }) => [s.histRow, !first && s.histDivider, pressed && s.histPressed]}
-    >
-      <View style={[s.histIcon, { backgroundColor: tint(round.category.color, '1f') }]}>
-        <Text style={s.histIconText}>{round.category.icon}</Text>
-      </View>
-      <View style={s.histBody}>
-        <Text style={s.histName} numberOfLines={1}>
-          {round.category.name}
-        </Text>
-        <Text style={s.histMeta}>
-          {levelInfo(round.difficulty).label} · {ago(round.endedAt)}
-        </Text>
-      </View>
-      <View style={s.histScore}>
-        <Text style={s.histPoints}>{round.totalScore} pts</Text>
-        <Text style={[s.histAccuracy, { color: good ? colors.ok : colors.muted }]}>
-          {round.accuracy}%
-        </Text>
       </View>
     </Pressable>
   );
@@ -377,21 +359,4 @@ const s = StyleSheet.create({
     paddingHorizontal: 14,
     ...cardShadow,
   },
-  histRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
-  histDivider: { borderTopWidth: 1, borderTopColor: colors.line },
-  histPressed: { opacity: 0.6 },
-  histIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  histIconText: { fontSize: 19 },
-  histBody: { flex: 1, minWidth: 0 },
-  histName: { fontSize: 14, fontWeight: '800', color: colors.ink },
-  histMeta: { fontSize: 13, color: colors.muted },
-  histScore: { alignItems: 'flex-end' },
-  histPoints: { fontWeight: '800', color: colors.brandDark },
-  histAccuracy: { fontSize: 13, fontWeight: '800' },
 });

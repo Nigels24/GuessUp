@@ -15,7 +15,9 @@ import {
   TextInput,
   ToastAndroid,
   View,
+  type StyleProp,
   type TextInputProps,
+  type ViewStyle,
 } from 'react-native';
 import { initials, tint } from '../lib/format';
 import { colors } from '../theme';
@@ -233,12 +235,25 @@ export function Button({
 }
 
 /** Initials on a brand square (the prototype's .avatar / .avatar-lg). */
-export function Avatar({ name, size = 44 }: { name: string | undefined; size?: number }) {
+export function Avatar({
+  name,
+  size = 44,
+  color,
+  style,
+}: {
+  name: string | undefined;
+  size?: number;
+  /** Background instead of the brand color. */
+  color?: string;
+  style?: StyleProp<ViewStyle>;
+}) {
   return (
     <View
       style={[
         styles.avatar,
         { width: size, height: size, borderRadius: size / 3.1 },
+        color ? { backgroundColor: color } : null,
+        style,
       ]}
     >
       <Text style={[styles.avatarText, { fontSize: size * 0.39 }]}>
@@ -255,25 +270,52 @@ export function Pill({
   color,
 }: {
   children: React.ReactNode;
-  tone?: 'gray' | 'brand';
+  tone?: 'gray' | 'brand' | 'ok';
   color?: string;
 }) {
   return (
     <View
       style={[
         styles.pill,
-        tone === 'brand' ? styles.pillBrand : styles.pillGray,
+        tone === 'brand' ? styles.pillBrand : tone === 'ok' ? styles.pillOk : styles.pillGray,
         color ? { backgroundColor: tint(color, '22') } : null,
       ]}
     >
       <Text
         style={[
           styles.pillText,
-          { color: color ?? (tone === 'brand' ? colors.brandDark : colors.grayPillText) },
+          {
+            color:
+              color ??
+              (tone === 'brand' ? colors.brandDark : tone === 'ok' ? colors.okDark : colors.grayPillText),
+          },
         ]}
       >
         {children}
       </Text>
+    </View>
+  );
+}
+
+/** The prototype's .card: a white rounded panel with the soft shadow. */
+export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  return <View style={[styles.card, style]}>{children}</View>;
+}
+
+/** The prototype's .section-title: a heading with optional text or a link on the right. */
+export function SectionTitle({
+  title,
+  right,
+  style,
+}: {
+  title: string;
+  right?: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+}) {
+  return (
+    <View style={[styles.sectionTitle, style]}>
+      <Text style={styles.sectionHeading}>{title}</Text>
+      {typeof right === 'string' ? <Text style={styles.sectionMeta}>{right}</Text> : right}
     </View>
   );
 }
@@ -453,7 +495,27 @@ export const styles = StyleSheet.create({
   },
   pillGray: { backgroundColor: colors.grayPill },
   pillBrand: { backgroundColor: colors.brandSoft },
+  pillOk: { backgroundColor: colors.okSoft },
   pillText: { fontSize: 12, fontWeight: '800' },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: 20,
+    padding: 16,
+    shadowColor: colors.shadow,
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 2,
+  },
+  sectionTitle: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'baseline',
+    marginTop: 22,
+    marginBottom: 10,
+  },
+  sectionHeading: { fontSize: 18, fontWeight: '800', color: colors.ink },
+  sectionMeta: { fontSize: 13, color: colors.muted },
   topbar: { marginTop: 4, marginBottom: 12 },
   topbarTitle: { fontSize: 24, fontWeight: '800', color: colors.ink },
   centered: {

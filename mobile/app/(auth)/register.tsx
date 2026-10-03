@@ -17,11 +17,11 @@ import {
   Field,
   PasswordField,
   PrimaryButton,
-  styles as ui,
 } from '../../src/components/ui';
+import { YearLevelPicker } from '../../src/components/YearLevelPicker';
 import { apiErrorMessage } from '../../src/lib/api';
 import { useAuth } from '../../src/lib/auth-context';
-import { YEAR_LEVELS, type YearLevel } from '../../src/lib/auth';
+import type { YearLevel } from '../../src/lib/auth';
 import { colors } from '../../src/theme';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -108,29 +108,7 @@ export default function RegisterScreen() {
               autoComplete="email"
             />
 
-            <View style={ui.field}>
-              <Text style={ui.label}>Year level</Text>
-              <View style={s.years} accessibilityRole="radiogroup">
-                {YEAR_LEVELS.map((level) => {
-                  const selected = level === yearLevel;
-                  return (
-                    <Pressable
-                      key={level}
-                      onPress={() => setYearLevel(level)}
-                      accessibilityRole="radio"
-                      accessibilityState={{ selected }}
-                      style={[s.year, selected && s.yearSelected]}
-                    >
-                      <Text
-                        style={[s.yearText, selected && s.yearTextSelected]}
-                      >
-                        {level}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </View>
+            <YearLevelPicker value={yearLevel} onChange={setYearLevel} />
 
             <PasswordField
               label="Password"
@@ -188,21 +166,4 @@ const s = StyleSheet.create({
   },
   backText: { fontSize: 18, color: colors.ink2 },
   heading: { flex: 1, fontSize: 24, fontWeight: '800', color: colors.ink },
-  years: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  year: {
-    flexGrow: 1,
-    flexBasis: '45%',
-    borderWidth: 2,
-    borderColor: colors.line,
-    borderRadius: 12,
-    paddingVertical: 10,
-    alignItems: 'center',
-    backgroundColor: colors.white,
-  },
-  yearSelected: {
-    borderColor: colors.brand,
-    backgroundColor: colors.brandSoft,
-  },
-  yearText: { fontSize: 14, fontWeight: '700', color: colors.ink2 },
-  yearTextSelected: { color: colors.brandDark, fontWeight: '800' },
 });

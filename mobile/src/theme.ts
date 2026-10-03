@@ -35,4 +35,10 @@ export const colors = {
   warnSoft: '#FEF3C7',
   warnBorder: '#F2C66B',
   white: '#FFFFFF',
+  /** Avatars of other players on the leaderboard. */
+  lbAvatar: '#A89BEA',
+  /** The podium's gradients (.pod-1/2/3 .base), top and bottom. */
+  gold: ['#FFC83D', '#F59E0B'],
+  silver: ['#A5B4FC', '#818CF8'],
+  bronze: ['#FDBA74', '#FB923C'],
 } as const;

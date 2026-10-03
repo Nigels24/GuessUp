@@ -1,7 +1,8 @@
 /**
  * Result screen (the prototype's #/s/result): score, accuracy, correct
- * count, time used, rank, badges earned in the round, the answer review,
- * then Home or Play again (same category and level).
+ * count, time used, rank (with "View" to open that category's leaderboard),
+ * badges earned in the round, the answer review, then Home or Play again
+ * (same category and level).
  *
  * Right after a round (`fresh=1`) it uses the /finish response, which also
  * lists the new badges. Otherwise (a recent round tapped on Home, or after a
@@ -152,6 +153,14 @@ export default function ResultScreen() {
               </Text>
               <Text style={s.small}>in {session.category.name}</Text>
             </View>
+            <Button
+              title="View"
+              variant="ghost"
+              small
+              onPress={() =>
+                router.dismissTo({ pathname: '/ranks', params: { cat: session.category.id } })
+              }
+            />
           </View>
         ) : null}
 

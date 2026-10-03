@@ -1,6 +1,8 @@
 /**
- * Gameplay API calls and the types they return. The shapes mirror the API's
- * DTOs (api/src/game/game.types.ts, api/src/me/me.summary.ts,
+ * Gameplay, leaderboard and progress API calls and the types they return.
+ * The shapes mirror the API's DTOs (api/src/game/game.types.ts,
+ * api/src/me/me.summary.ts, api/src/me/me.progress.ts,
+ * api/src/leaderboard/leaderboard.service.ts,
  * api/src/categories/categories.service.ts); keep them in step.
  */
 import { api } from './api';
@@ -12,9 +14,6 @@ export type QuestionType = 'MULTIPLE_CHOICE' | 'PICTURE' | 'WORD_PUZZLE';
 
 /** Items in one round (ROUND_SIZE in api/src/common/game-rules.ts). */
 export const ROUND_SIZE = 5;
-
-/** Number of badges a student can earn (BADGES in api/src/common/badges.ts). */
-export const TOTAL_BADGES = 8;
 
 export interface LevelInfo {
   key: Difficulty;
@@ -85,11 +84,22 @@ export interface Category extends CategoryRef {
   activeQuestionCount: number;
 }
 
+/** A badge the student can earn (BADGES in api/src/common/badges.ts). */
+export interface BadgeInfo {
+  code: string;
+  icon: string;
+  name: string;
+  description: string;
+}
+
 /** GET /me/summary (completed rounds only) */
 export interface MeSummary {
   totalPoints: number;
   roundsPlayed: number;
+  /** Earned badges, oldest first. */
   badges: { code: string; icon: string; name: string; earnedAt: string }[];
+  /** Every badge, earned or not, in display order. */
+  allBadges: BadgeInfo[];
   perCategory: {
     categoryId: string;
     name: string;
@@ -111,6 +121,47 @@ export interface HistoryEntry {
   correctCount: number;
   totalItems: number;
   endedAt: string | null;
+}
+
+/** One ranked student in a category. */
+export interface RankingRow {
+  rank: number;
+  userId: string;
+  fullName: string;
+  totalPoints: number;
+  roundsPlayed: number;
+  /** 0–100 */
+  accuracy: number;
+}
+
+/** GET /leaderboard/:categoryId — ranked by the server (points, then accuracy). */
+export interface Leaderboard {
+  category: CategoryRef;
+  totalPlayers: number;
+  /** The top 50. */
+  rows: RankingRow[];
+  /** The student's own row, also when outside `rows`; null when not ranked. */
+  me: RankingRow | null;
+}
+
+/** GET /me/progress (completed rounds only) */
+export interface MeProgress {
+  roundsPlayed: number;
+  totalPoints: number;
+  /** 0–100 */
+  accuracy: number;
+  /** Played categories only, in category order. */
+  perCategory: { category: CategoryRef; roundsPlayed: number; accuracy: number; avgScore: number }[];
+  /** Most missed first, at most 5. */
+  topicsToReview: {
+    category: CategoryRef;
+    topic: string;
+    attempts: number;
+    correct: number;
+    wrong: number;
+  }[];
+  /** The latest 20 completed rounds, newest first. */
+  history: HistoryEntry[];
 }
 
 /** The item being played. Never contains the answer. */
@@ -158,6 +209,16 @@ export async function fetchCategories(): Promise<Category[]> {
 
 export async function fetchSummary(): Promise<MeSummary> {
   const { data } = await api.get<MeSummary>('/me/summary');
+  return data;
+}
+
+export async function fetchLeaderboard(categoryId: string): Promise<Leaderboard> {
+  const { data } = await api.get<Leaderboard>(`/leaderboard/${encodeURIComponent(categoryId)}`);
+  return data;
+}
+
+export async function fetchProgress(): Promise<MeProgress> {
+  const { data } = await api.get<MeProgress>('/me/progress');
   return data;
 }
 

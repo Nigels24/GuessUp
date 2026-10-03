@@ -18,7 +18,7 @@ import { PrismaModule } from './prisma/prisma.module.js';
     GameModule,
     LeaderboardModule,
     MeModule,
-    // Next steps add QuestionsModule, the leaderboard endpoints and
+    // Next steps add QuestionsModule and
     // ReportsModule. AuthModule's global guard protects every route they add
     // unless it is marked @Public().
   ],

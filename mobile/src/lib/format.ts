@@ -45,3 +45,12 @@ export function dur(seconds: number): string {
   const s = sec % 60;
   return m ? `${m}m ${String(s).padStart(2, '0')}s` : `${s}s`;
 }
+
+/** "Oct 3, 2026" (the prototype's F.date). */
+export function date(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-PH', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+}

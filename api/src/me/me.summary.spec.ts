@@ -1,3 +1,4 @@
+import { BADGES } from '../common/badges.js';
 import { buildSummary } from './me.summary.js';
 
 const categories = [
@@ -13,6 +14,7 @@ describe('buildSummary', () => {
       totalPoints: 0,
       roundsPlayed: 0,
       badges: [],
+      allBadges: BADGES.map(({ code, icon, name, description }) => ({ code, icon, name, description })),
       perCategory: [
         { categoryId: 'c1', name: 'Programming', roundsPlayed: 0, accuracy: 0, bestScore: 0 },
         { categoryId: 'c2', name: 'Networking', roundsPlayed: 0, accuracy: 0, bestScore: 0 },
@@ -38,6 +40,17 @@ describe('buildSummary', () => {
       { categoryId: 'c2', name: 'Networking', roundsPlayed: 0, accuracy: 0, bestScore: 0 },
       { categoryId: 'c3', name: 'Databases', roundsPlayed: 1, accuracy: 33, bestScore: 12 },
     ]);
+  });
+
+  it('lists all 8 badges with their descriptions, earned or not', () => {
+    const { allBadges } = buildSummary(categories, [], []);
+    expect(allBadges).toHaveLength(8);
+    expect(allBadges[0]).toEqual({
+      code: 'first_round',
+      icon: '🎉',
+      name: 'First Steps',
+      description: 'Finish your first round.',
+    });
   });
 
   it('names badges from BADGES, oldest first, and skips unknown codes', () => {

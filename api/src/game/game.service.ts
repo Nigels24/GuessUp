@@ -40,7 +40,8 @@ export const GAME_MESSAGES = {
   questionMissing: 'This question is no longer available.',
 } as const;
 
-const CATEGORY_REF = { id: true, slug: true, name: true, icon: true, color: true } as const;
+/** The category fields sent with rounds (CategoryRef). */
+export const CATEGORY_REF = { id: true, slug: true, name: true, icon: true, color: true } as const;
 
 const QUESTION_FIELDS = {
   id: true,
@@ -57,6 +58,20 @@ const QUESTION_FIELDS = {
 } as const;
 
 type SessionWithCategory = GameSession & { category: CategoryRef };
+
+/** A completed round as GET /game/history and the progress history list it. */
+export function toHistoryEntry(s: SessionWithCategory): HistoryEntry {
+  return {
+    id: s.id,
+    category: s.category,
+    difficulty: s.difficulty,
+    totalScore: s.totalScore,
+    accuracy: s.accuracy,
+    correctCount: s.correctCount,
+    totalItems: s.totalItems,
+    endedAt: s.endedAt,
+  };
+}
 
 /**
  * Server-authoritative gameplay (Chapter III: game logic and scoring reside in
@@ -344,16 +359,7 @@ export class GameService {
       take: limit,
       include: { category: { select: CATEGORY_REF } },
     });
-    return sessions.map((s) => ({
-      id: s.id,
-      category: s.category,
-      difficulty: s.difficulty,
-      totalScore: s.totalScore,
-      accuracy: s.accuracy,
-      correctCount: s.correctCount,
-      totalItems: s.totalItems,
-      endedAt: s.endedAt,
-    }));
+    return sessions.map(toHistoryEntry);
   }
 
   /* ---------- helpers ---------- */

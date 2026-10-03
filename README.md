@@ -65,8 +65,23 @@ behavior, wording and seed content.
 - Seeded pictures are SVG files, which React Native's `Image` cannot draw, so the app uses
   `react-native-svg` for them
 
-Not built yet: leaderboard and progress screens, profile, admin CRUD screens, leaderboard
-endpoints, reports.
+## Step 4: leaderboard, progress, profile
+
+- `GET /api/leaderboard/:categoryId` (any signed-in user): rankings per subject category only,
+  by accumulated points, then accuracy; active students only. Returns the top 50 and the
+  caller's own row (`me`), also when it is outside the top 50. 404 for an unknown category
+- `GET /api/me/progress` (students, completed rounds only): rounds, points, accuracy, accuracy by
+  subject, the 5 most missed topics ("Topics to review") and the latest 20 rounds
+- `PATCH /api/me` (full name, year level) and `POST /api/me/password` (current + new password,
+  bcrypt cost 10). A wrong current password is a 400, not a 401, because the apps sign out on 401.
+  Password changes are limited to 10 per minute per account
+- `GET /api/me/summary` also lists all 8 badges (`allBadges`) for the badge grid
+- Mobile app: Ranks (category chips, podium, own row pinned, "Play now"), My Progress, and Profile
+  (badges, Edit profile, Change password, About, Log out). The result screen's rank card has
+  "View", which opens Ranks on that category. "Play now" and "Practice" open Home with the level
+  picker for that category
+
+Not built yet: admin CRUD screens, reports.
 
 ---
 

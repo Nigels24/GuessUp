@@ -17,6 +17,8 @@ interface AuthState {
   login: (email: string, password: string) => Promise<void>;
   register: (input: auth.RegisterInput) => Promise<void>;
   logout: () => Promise<void>;
+  /** Replace the signed-in user (after Edit profile), here and in storage. */
+  updateUser: (user: auth.User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -46,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const fresh = await auth.fetchMe();
           setUser(fresh);
+          await auth.saveUser(fresh);
         } catch (error) {
           if (axios.isAxiosError(error) && error.response?.status === 403)
             await logout();
@@ -64,9 +67,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(session.user);
   }, []);
 
+  const updateUser = useCallback(async (next: auth.User) => {
+    setUser(next);
+    await auth.saveUser(next);
+  }, []);
+
   const value = useMemo(
-    () => ({ user, ready, login, register, logout }),
-    [user, ready, login, register, logout],
+    () => ({ user, ready, login, register, logout, updateUser }),
+    [user, ready, login, register, logout, updateUser],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
