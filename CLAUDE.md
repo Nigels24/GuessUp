@@ -14,7 +14,7 @@ GuessUp: a gamified guessing game for IT students (capstone project, final defen
 
 `docs/prototype/GuessUp-Prototype.html` is the approved prototype and the reference for behavior, wording, and seed content.
 
-The README's step sections (3A, 3B, 4) describe what is built; its "Not built yet" line lists what is not (admin CRUD screens, reports). Check the source before you assume something from the README exists.
+The README's step sections (3A, 3B, 4, 5) describe what is built. Check the source before you assume something from the README exists.
 
 ## Commands
 
@@ -53,13 +53,14 @@ npm run build:apk
   - Finishing a round updates `LeaderboardEntry` and awards badges in the same transaction. `LeaderboardService.categoryRanking` computes ranks; `GET /leaderboard/:categoryId` returns the top 50 plus the caller's row.
   - `me/me.summary.ts` and `me/me.progress.ts` are the pure builders behind `/me/summary` and `/me/progress` (unit-tested). `PATCH /me` and `POST /me/password` are the profile endpoints; a wrong current password is a 400 because both clients sign out on 401.
 - Prisma: the migrations in `prisma/migrations/` are the only source of truth for the schema. Deploy uses `prisma migrate deploy`. The `student_badges` table is in the schema but not in the thesis ERD.
-- Seed (`prisma/seed.ts`, `prisma/seed-data/`): it upserts questions on a stable `seedKey` (`<category>-<difficulty>-<nn>`). It aborts unless there are exactly 7 categories and 105 questions, with 5 per category × difficulty. Picture-question images are SVGs in `api/public/images/`.
+- Seed (`prisma/seed.ts`, `prisma/seed-data/`): it upserts questions on a stable `seedKey` (`<category>-<difficulty>-<nn>`). It aborts unless the 7 seeded categories and 105 seeded questions exist, with 5 per category × difficulty (rows added in the admin panel are not counted). It does not touch `isActive` of existing items. Picture-question images are SVGs in `api/public/images/`; uploaded ones are on Cloudinary (`imagePublicId` set).
 
 ### Clients
 - Both clients use a 60 s request timeout because the Render free tier takes about 50 s to wake. Both turn Nest's `message`, which can be a string or an array of validation messages, into user-facing text. A 401 on a request that carried a token signs the user out.
-- **admin**: `src/lib/api.ts` (`apiFetch`) uses the base URL from `NEXT_PUBLIC_API_URL` and keeps the token in localStorage. Panel pages live under the `(panel)` route group behind `AdminShell`. Most of them are still `ComingSoon` placeholders.
+- **admin**: `src/lib/api.ts` (`apiFetch`, `apiDownload` for CSV, FormData for uploads) uses the base URL from `NEXT_PUBLIC_API_URL` and keeps the token in localStorage. Panel pages live under the `(panel)` route group behind `AdminShell` and `FeedbackProvider` (`components/ui.tsx`: modal, confirm, toast, pills). They call the API's `/api/admin/...` routes (`api/src/admin`); per-type question rules are in `admin/question.rules.ts`, report counting in `admin/reports.logic.ts` (both pure, unit-tested).
 - **mobile**: `src/lib/api.ts` reads the API base URL **at runtime from AsyncStorage**, set on `app/settings-api.tsx`, so one APK can target the emulator (`http://10.0.2.2:3000/api`), a LAN laptop, or Render. The JWT is stored in `expo-secure-store`. Routes are grouped as `(auth)` and `(app)`. Seeded images are SVG, which RN `Image` cannot render, so they need `react-native-svg`.
 
-## Demo accounts (seeded)
-- admin@jhcsc.edu.ph / `admin123`
-- student@jhcsc.edu.ph / `student123`
+## Accounts
+- No credentials in the repo. The seed creates the admin and the demo student only from `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` and `SEED_STUDENT_EMAIL`/`SEED_STUDENT_PASSWORD`, and never changes an existing account's password. `npm run admin:set-password` (env `ADMIN_EMAIL`, `NEW_ADMIN_PASSWORD`) resets an admin password.
+- e2e tests create their own `e2e-…@example.com` accounts with random passwords (`test/helpers.ts#createTestAccount`) and delete them; never log in with a real account in tests.
+- The login "Demo" hints (admin and mobile) show only with `NEXT_PUBLIC_SHOW_DEMO_LOGIN` / `EXPO_PUBLIC_SHOW_DEMO_LOGIN` = `true` plus the demo email/password env vars; keep them off in deployed builds.

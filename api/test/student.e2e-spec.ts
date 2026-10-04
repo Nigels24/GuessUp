@@ -3,7 +3,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { ROUND_SIZE } from './../src/common/game-rules.js';
 import { PrismaService } from './../src/prisma/prisma.service.js';
-import { allKeys, createApp } from './helpers.js';
+import { allKeys, createApp, createTestAccount, deleteTestAccounts, type TestAccount } from './helpers.js';
 
 /**
  * End-to-end: the student side outside gameplay — leaderboard, My Progress
@@ -26,6 +26,7 @@ describe('Student side: leaderboard, progress, profile (e2e)', () => {
   let tokenA: string;
   let tokenB: string;
   let adminToken: string;
+  let adminAccount: TestAccount | undefined;
   let idA: string;
   let idB: string;
   let progId: string;
@@ -76,7 +77,7 @@ describe('Student side: leaderboard, progress, profile (e2e)', () => {
     for (const email of emails) {
       const res = await request(http)
         .post('/api/auth/register')
-        .send({ fullName: 'E2E Side Player', email, password: PASSWORD, yearLevel: '2nd Year' })
+        .send({ fullName: 'e2e-side-player', email, password: PASSWORD, yearLevel: '2nd Year' })
         .expect(201);
       tokens.push(res.body.accessToken);
       ids.push(res.body.user.id);
@@ -84,9 +85,10 @@ describe('Student side: leaderboard, progress, profile (e2e)', () => {
     [tokenA, tokenB] = tokens as [string, string];
     [idA, idB] = ids as [string, string];
 
+    adminAccount = await createTestAccount(prisma, 'ADMIN', 'side-admin');
     const admin = await request(http)
       .post('/api/auth/login')
-      .send({ email: 'admin@jhcsc.edu.ph', password: 'admin123' })
+      .send({ email: adminAccount.email, password: adminAccount.password })
       .expect(200);
     adminToken = admin.body.accessToken;
 
@@ -100,11 +102,11 @@ describe('Student side: leaderboard, progress, profile (e2e)', () => {
   }, 60_000);
 
   afterAll(async () => {
+    // By email, not by id, so a run that stopped during setup is cleaned up too.
     // Answers cascade with their session; leaderboard rows and badges with the user.
-    await prisma.gameSession.deleteMany({ where: { userId: { in: [idA, idB] } } });
-    await prisma.user.deleteMany({ where: { email: { in: emails } } });
-    await app.close();
-  });
+    if (prisma) await deleteTestAccounts(prisma, [...emails, ...(adminAccount ? [adminAccount.email] : [])]);
+    await app?.close();
+  }, 60_000);
 
   describe('GET /api/leaderboard/:categoryId', () => {
     it('ranks the category by points and returns the caller as "me"', async () => {
@@ -124,7 +126,7 @@ describe('Student side: leaderboard, progress, profile (e2e)', () => {
       expect(res.body.me).toEqual({
         rank: expect.any(Number),
         userId: idA,
-        fullName: 'E2E Side Player',
+        fullName: 'e2e-side-player',
         totalPoints: roundA.total,
         roundsPlayed: 1,
         accuracy: Math.round((1 / ROUND_SIZE) * 100),
@@ -219,18 +221,18 @@ describe('Student side: leaderboard, progress, profile (e2e)', () => {
       const res = await request(http)
         .patch('/api/me')
         .set(auth(tokenA))
-        .send({ fullName: '  Edited Player  ', yearLevel: '4th Year' })
+        .send({ fullName: '  e2e-edited-player  ', yearLevel: '4th Year' })
         .expect(200);
       expect(res.body).toEqual({
         id: idA,
-        fullName: 'Edited Player',
+        fullName: 'e2e-edited-player',
         email: emails[0],
         role: 'STUDENT',
         yearLevel: '4th Year',
         status: 'ACTIVE',
       });
       const me = await request(http).get('/api/auth/me').set(auth(tokenA)).expect(200);
-      expect(me.body).toMatchObject({ fullName: 'Edited Player', yearLevel: '4th Year' });
+      expect(me.body).toMatchObject({ fullName: 'e2e-edited-player', yearLevel: '4th Year' });
     });
 
     it('validates the fields and refuses email or role changes', async () => {
@@ -244,7 +246,7 @@ describe('Student side: leaderboard, progress, profile (e2e)', () => {
         await request(http).patch('/api/me').set(auth(tokenA)).send(body).expect(400);
       }
       const user = await prisma.user.findUniqueOrThrow({ where: { id: idA } });
-      expect(user).toMatchObject({ email: emails[0], role: 'STUDENT', fullName: 'Edited Player' });
+      expect(user).toMatchObject({ email: emails[0], role: 'STUDENT', fullName: 'e2e-edited-player' });
     });
 
     it('is for students only', async () => {
@@ -299,7 +301,7 @@ describe('Student side: leaderboard, progress, profile (e2e)', () => {
       await request(http)
         .post('/api/me/password')
         .set(auth(adminToken))
-        .send({ currentPassword: 'admin123', newPassword: 'whatever-long' })
+        .send({ currentPassword: adminAccount!.password, newPassword: 'whatever-long' })
         .expect(403);
     });
   });

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { AdminModule } from './admin/admin.module.js';
 import { AuthModule } from './auth/auth.module.js';
 import { CategoriesModule } from './categories/categories.module.js';
 import { GameModule } from './game/game.module.js';
@@ -18,9 +19,8 @@ import { PrismaModule } from './prisma/prisma.module.js';
     GameModule,
     LeaderboardModule,
     MeModule,
-    // Next steps add QuestionsModule and
-    // ReportsModule. AuthModule's global guard protects every route they add
-    // unless it is marked @Public().
+    // The Admin Panel's routes (/api/admin/...), all @Roles('ADMIN').
+    AdminModule,
   ],
 })
 export class AppModule {}

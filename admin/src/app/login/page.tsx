@@ -6,7 +6,17 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useAuth } from "@/lib/auth-context";
 
 const SCHOOL = "J.H. Cerilles State College – Dumingag Campus";
-const DEMO = { email: "admin@jhcsc.edu.ph", password: "admin123" };
+/**
+ * Optional "Demo" hint for presentations. Off unless NEXT_PUBLIC_SHOW_DEMO_LOGIN
+ * is "true" and both values are set (in admin/.env.local, never on Vercel).
+ * No account details are kept in the code.
+ */
+const DEMO =
+  process.env.NEXT_PUBLIC_SHOW_DEMO_LOGIN === "true" &&
+  process.env.NEXT_PUBLIC_DEMO_EMAIL &&
+  process.env.NEXT_PUBLIC_DEMO_PASSWORD
+    ? { email: process.env.NEXT_PUBLIC_DEMO_EMAIL, password: process.env.NEXT_PUBLIC_DEMO_PASSWORD }
+    : null;
 
 /** Admin login, matching the prototype's #/a/login screen. */
 export default function LoginPage() {
@@ -109,17 +119,19 @@ export default function LoginPage() {
               </p>
             )}
           </form>
-          <button
-            type="button"
-            className="demo-chip"
-            onClick={() => {
-              setEmail(DEMO.email);
-              setPassword(DEMO.password);
-            }}
-          >
-            🧪 <b>Demo:</b> {DEMO.email} / {DEMO.password}{" "}
-            <span className="text-muted">(click to fill)</span>
-          </button>
+          {DEMO && (
+            <button
+              type="button"
+              className="demo-chip"
+              onClick={() => {
+                setEmail(DEMO.email);
+                setPassword(DEMO.password);
+              }}
+            >
+              🧪 <b>Demo:</b> {DEMO.email} / {DEMO.password}{" "}
+              <span className="text-muted">(click to fill)</span>
+            </button>
+          )}
           <p className="mt-4 text-center text-sm">
             <Link href="/status" className="font-extrabold text-brand no-underline">
               Check API connection

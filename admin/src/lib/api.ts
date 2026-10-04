@@ -37,6 +37,8 @@ export class ApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** Every validation message the server sent (a form shows them all). */
+    readonly messages: string[] = [message],
   ) {
     super(message);
   }
@@ -95,17 +97,20 @@ export function setSignedOutHandler(handler: () => void): void {
 
 interface RequestOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+  /** JSON-encoded, or sent as is when it is FormData (file uploads). */
   body?: unknown;
   /** Send the stored token (default true). Login and health checks pass false. */
   auth?: boolean;
 }
 
-export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+/** The raw response of a successful request; errors become ApiError. */
+async function send(path: string, options: RequestOptions, accept: string): Promise<Response> {
   const { method = "GET", body, auth = true } = options;
   const token = auth ? currentToken() : null;
+  const isForm = typeof FormData !== "undefined" && body instanceof FormData;
 
-  const headers: Record<string, string> = { Accept: "application/json" };
-  if (body !== undefined) headers["Content-Type"] = "application/json";
+  const headers: Record<string, string> = { Accept: accept };
+  if (body !== undefined && !isForm) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const controller = new AbortController();
@@ -116,7 +121,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     res = await fetch(`${API_URL}${path}`, {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
       cache: "no-store",
       signal: controller.signal,
     });
@@ -131,23 +136,57 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
     clearTimeout(timer);
   }
 
-  const data: unknown = res.status === 204 ? null : await res.json().catch(() => null);
-
   if (!res.ok) {
+    const data: unknown = await res.json().catch(() => null);
     if (res.status === 401 && token) {
       clearSession();
       onSignedOut();
     }
-    throw new ApiError(errorMessage(data, res.status), res.status);
+    const messages = errorMessages(data, res.status);
+    throw new ApiError(messages[0]!, res.status, messages);
   }
-  return data as T;
+  return res;
+}
+
+export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const res = await send(path, options, "application/json");
+  return (res.status === 204 ? null : await res.json().catch(() => null)) as T;
+}
+
+/**
+ * Downloads a file (the reports' CSV export) with the administrator's token
+ * and saves it under the name the server gives, or `fallbackName`.
+ */
+export async function apiDownload(path: string, fallbackName: string): Promise<void> {
+  const res = await send(path, {}, "text/csv, */*");
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  const name = /filename="([^"]+)"/.exec(disposition)?.[1] ?? fallbackName;
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+    a.remove();
+  }, 500);
+}
+
+/** Question images: seeded ones are served by the API (/static/...), uploads are full URLs. */
+export function assetUrl(url: string): string {
+  return url.startsWith("/") ? `${API_URL.replace(/\/api$/, "")}${url}` : url;
 }
 
 /** Nest sends `message` as a string, or as a list of validation messages. */
-function errorMessage(data: unknown, status: number): string {
+function errorMessages(data: unknown, status: number): string[] {
   const message = (data as { message?: unknown } | null)?.message;
-  if (Array.isArray(message) && typeof message[0] === "string") return message[0];
-  if (typeof message === "string") return message;
-  if (status === 429) return "Too many attempts. Please wait a minute and try again.";
-  return `Request failed (${status}).`;
+  if (Array.isArray(message)) {
+    const texts = message.filter((m): m is string => typeof m === "string");
+    if (texts.length) return texts;
+  }
+  if (typeof message === "string") return [message];
+  if (status === 429) return ["Too many attempts. Please wait a minute and try again."];
+  if (status === 413) return ["The image must be 2 MB or smaller."];
+  return [`Request failed (${status}).`];
 }

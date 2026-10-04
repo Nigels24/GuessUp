@@ -15,7 +15,7 @@ function makeUser(overrides: Partial<User> = {}): User {
     id: 'user_1',
     fullName: 'Juan Dela Cruz',
     email: 'student@jhcsc.edu.ph',
-    passwordHash: bcrypt.hashSync('student123', 10),
+    passwordHash: bcrypt.hashSync('fixture-password', 10),
     role: 'STUDENT',
     yearLevel: '3rd Year',
     status: 'ACTIVE',
@@ -39,14 +39,14 @@ describe('AuthService', () => {
 
   describe('password hashing', () => {
     it('hashes with bcrypt cost 10 and never stores the plain password', async () => {
-      const hash = await service.hashPassword('student123');
-      expect(hash).not.toContain('student123');
+      const hash = await service.hashPassword('fixture-password');
+      expect(hash).not.toContain('fixture-password');
       expect(bcrypt.getRounds(hash)).toBe(10);
     });
 
     it('accepts the right password and rejects a wrong one', async () => {
-      const hash = await service.hashPassword('student123');
-      expect(await service.verifyPassword('student123', hash)).toBe(true);
+      const hash = await service.hashPassword('fixture-password');
+      expect(await service.verifyPassword('fixture-password', hash)).toBe(true);
       expect(await service.verifyPassword('student124', hash)).toBe(false);
     });
   });
@@ -90,7 +90,7 @@ describe('AuthService', () => {
       const user = makeUser();
       findUnique.mockResolvedValue(user);
 
-      const result = await service.login({ email: ' Student@JHCSC.edu.ph', password: 'student123' });
+      const result = await service.login({ email: ' Student@JHCSC.edu.ph', password: 'fixture-password' });
 
       expect(findUnique).toHaveBeenCalledWith({ where: { email: 'student@jhcsc.edu.ph' } });
       expect(result.user).toEqual({
@@ -115,14 +115,14 @@ describe('AuthService', () => {
 
     it('rejects an unknown email with the very same message', async () => {
       findUnique.mockResolvedValue(null);
-      const attempt = service.login({ email: 'nobody@jhcsc.edu.ph', password: 'student123' });
+      const attempt = service.login({ email: 'nobody@jhcsc.edu.ph', password: 'fixture-password' });
       await expect(attempt).rejects.toBeInstanceOf(UnauthorizedException);
       await expect(attempt).rejects.toThrow('Invalid email or password.');
     });
 
     it('rejects a deactivated account with 403', async () => {
       findUnique.mockResolvedValue(makeUser({ status: 'INACTIVE' }));
-      const attempt = service.login({ email: 'student@jhcsc.edu.ph', password: 'student123' });
+      const attempt = service.login({ email: 'student@jhcsc.edu.ph', password: 'fixture-password' });
       await expect(attempt).rejects.toBeInstanceOf(ForbiddenException);
       await expect(attempt).rejects.toThrow(
         'This account is deactivated. Please contact your instructor.',

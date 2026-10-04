@@ -3,7 +3,7 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { ANSWER_GRACE_SECONDS, LEVELS, ROUND_SIZE, scoreAnswer } from './../src/common/game-rules.js';
 import { PrismaService } from './../src/prisma/prisma.service.js';
-import { allKeys, createApp } from './helpers.js';
+import { allKeys, createApp, createTestAccount, deleteTestAccounts, type TestAccount } from './helpers.js';
 
 /**
  * End-to-end gameplay: a full round played against the real API and database.
@@ -40,6 +40,7 @@ describe('Gameplay (e2e)', () => {
   let tokenA: string;
   let tokenB: string;
   let adminToken: string;
+  let adminAccount: TestAccount | undefined;
   let progId: string;
   /** Student A's completed round, for the summary test. */
   let roundA: { total: number; correct: number };
@@ -70,27 +71,29 @@ describe('Gameplay (e2e)', () => {
     for (const email of emails) {
       const res = await request(http)
         .post('/api/auth/register')
-        .send({ fullName: 'E2E Player', email, password: 'longenough', yearLevel: '2nd Year' })
+        .send({ fullName: 'e2e-player', email, password: 'longenough', yearLevel: '2nd Year' })
         .expect(201);
       tokens.push(res.body.accessToken);
     }
     [tokenA, tokenB] = tokens as [string, string];
 
+    adminAccount = await createTestAccount(prisma, 'ADMIN', 'game-admin');
     const admin = await request(http)
       .post('/api/auth/login')
-      .send({ email: 'admin@jhcsc.edu.ph', password: 'admin123' })
+      .send({ email: adminAccount.email, password: adminAccount.password })
       .expect(200);
     adminToken = admin.body.accessToken;
   });
 
   afterAll(async () => {
-    const users = await prisma.user.findMany({ where: { email: { in: emails } } });
-    const userIds = users.map((u) => u.id);
-    // Answers cascade with their session; leaderboard rows and badges with the user.
-    await prisma.gameSession.deleteMany({ where: { userId: { in: userIds } } });
-    await prisma.user.deleteMany({ where: { id: { in: userIds } } });
-    await app.close();
-  });
+    if (prisma) {
+      // Answers cascade with their session; leaderboard rows and badges with the user.
+      // The empty category is deleted by its own test; this catches it if that test stopped early.
+      await deleteTestAccounts(prisma, [...emails, ...(adminAccount ? [adminAccount.email] : [])]);
+      await prisma.category.deleteMany({ where: { slug: `e2e-empty-${stamp}`, questions: { none: {} }, sessions: { none: {} } } });
+    }
+    await app?.close();
+  }, 60_000);
 
   it('GET /api/categories lists the 7 categories with their active question counts', async () => {
     const res = await request(http).get('/api/categories').set(auth(tokenA)).expect(200);
@@ -426,7 +429,7 @@ describe('Gameplay (e2e)', () => {
     const empty = await prisma.category.create({
       data: {
         slug: `e2e-empty-${stamp}`,
-        name: `E2E Empty ${stamp}`,
+        name: `e2e-empty-${stamp}`,
         icon: '📭',
         color: '#999999',
         description: 'Temporary category with no questions.',

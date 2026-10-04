@@ -8,7 +8,8 @@ import { join } from 'node:path';
  */
 export function configureApp(app: NestExpressApplication): void {
   // The mobile app and the admin panel are separate origins.
-  app.enableCors({ origin: true, credentials: true });
+  // Content-Disposition is exposed so the panel can name CSV downloads.
+  app.enableCors({ origin: true, credentials: true, exposedHeaders: ['Content-Disposition'] });
 
   // Render sits behind one proxy hop. Trusting it makes req.ip the student's
   // address instead of the proxy's, which the login rate limit relies on.

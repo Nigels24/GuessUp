@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { AdminShell } from "@/components/AdminShell";
+import { FeedbackProvider } from "@/components/ui";
 import { useAuth } from "@/lib/auth-context";
 
 /** Every page in this group requires a signed-in administrator. */
@@ -18,8 +19,10 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
     return <div className="grid min-h-screen place-items-center text-muted">Loading…</div>;
   }
   return (
-    <AdminShell user={user} onLogout={logout}>
-      {children}
-    </AdminShell>
+    <FeedbackProvider>
+      <AdminShell user={user} onLogout={logout}>
+        {children}
+      </AdminShell>
+    </FeedbackProvider>
   );
 }

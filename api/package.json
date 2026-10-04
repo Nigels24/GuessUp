@@ -24,6 +24,7 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "prisma db seed",
     "prisma:reset": "prisma migrate reset",
+    "admin:set-password": "tsx scripts/set-admin-password.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -37,6 +38,7 @@
     "bcryptjs": "^3.0.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
+    "cloudinary": "^2.11.0",
     "prisma": "^6.19.3",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"

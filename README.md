@@ -11,7 +11,7 @@ Final defense: **October 15, 2026**
 | `admin/` | Administrator web panel | Next.js 14 (App Router), TypeScript, Tailwind |
 | `mobile/`| Student Android app     | Expo SDK 57, React Native, TypeScript         |
 
-Hosting: **Neon** (PostgreSQL) · **Render** (API) · **Vercel** (admin panel) · **Cloudinary** (images, later).
+Hosting: **Neon** (PostgreSQL) · **Render** (API) · **Vercel** (admin panel) · **Cloudinary** (question images).
 
 The approved prototype of every screen and game rule is in
 `docs/prototype/GuessUp-Prototype.html` — open it in a browser. It is the reference for
@@ -81,7 +81,90 @@ behavior, wording and seed content.
   "View", which opens Ranks on that category. "Play now" and "Practice" open Home with the level
   picker for that category
 
-Not built yet: admin CRUD screens, reports.
+## Step 5: administrator web panel
+
+API (`api/src/admin`, every route `@Roles('ADMIN')`, so a student token gets 403):
+
+- **Categories** `GET/POST /api/admin/categories`, `PATCH/DELETE /api/admin/categories/:id`: question
+  counts per difficulty, unique name (ignoring case) and slug, one emoji icon, hex color. The slug is
+  made from the name and cannot change afterwards (the seed identifies categories by it). Delete is
+  refused with 409 and the reason while the category has questions or recorded game sessions
+- **Questions** `GET/POST /api/admin/questions` (filters: category, difficulty, type, active, search;
+  paginated), `GET/PATCH/DELETE /api/admin/questions/:id`, `PATCH /api/admin/questions/:id/active`.
+  The server refuses items the game cannot play (`api/src/admin/question.rules.ts`):
+  multiple choice needs the answer plus exactly 3 different wrong options (the app shows A–D),
+  a picture item needs an image, a word puzzle answer is letters and spaces only, 2–16 letters,
+  and Difficult items cannot have a hint. A question with recorded answers (or one in a round
+  being played) is **deactivated instead of deleted**, and the response says so. Gameplay only
+  ever draws active questions
+- **Images** `POST /api/admin/uploads/image` (multipart field `file`): JPG, PNG, WebP or SVG up to
+  2 MB, recognized by content; SVGs with scripts or external links are refused. Stored on
+  Cloudinary in `guessup/questions`, returns `{ url, publicId }`. Replacing an image or deleting a
+  question deletes the old Cloudinary asset (seeded `/static` pictures have no `publicId` and are
+  never touched). `DELETE /api/admin/uploads/image?publicId=` discards an upload the form did not
+  save. `GET /api/admin/uploads/library` lists the seeded pictures. Without the Cloudinary
+  variables the API still starts and uploads answer 503 with a message naming them
+- **Students** `GET /api/admin/students` (search, year level, status; rounds, points, accuracy,
+  last played), `GET /api/admin/students/:id`, `PATCH /api/admin/students/:id/status`.
+  Administrator accounts are never listed and cannot be deactivated here
+- **Game sessions** `GET /api/admin/sessions` (student, category, difficulty, status, dates;
+  paginated) and `GET /api/admin/sessions/:id` with every answer
+- **Reports** `GET /api/admin/reports/activity`, `/scores`, `/most-missed`: `?from=&to=` as
+  YYYY-MM-DD (default: the last 30 days, at most 366), `?categoryId=`, and `?format=csv` for a
+  download (UTF-8 with BOM, opens in Excel). Most missed takes `?minAttempts=` (default 3, so an
+  item answered wrongly once does not top the list). Reports count completed rounds only, and
+  days are Philippine time (UTC+8) whatever the server's time zone
+- **Dashboard** `GET /api/admin/dashboard`
+
+Admin panel: Dashboard, Question Bank (filters, preview, form per item type with image upload and
+a live word-puzzle preview), Categories, Students (with the student detail view), Game Sessions
+(with each session's answers) and Reports (period and category filters, Export CSV per report,
+Print), laid out as in the prototype.
+
+### Signing in to the admin panel
+
+1. Start the API (`cd api && npm run start:dev`) and the panel (`cd admin && npm run dev`)
+2. Open the panel (http://localhost:3001 when the API already uses port 3000) and sign in with an
+   administrator account (the one created from `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`, see
+   "Accounts" below). The login page shows no account details; the optional "Demo" box is off
+   unless `NEXT_PUBLIC_SHOW_DEMO_LOGIN=true` is in `admin/.env.local` (see `admin/ENV-SETUP.md`)
+3. Student accounts are refused with "This account does not have the administrator role."
+
+### Cloudinary (question images)
+
+Create a free Cloudinary account and copy the three values from its dashboard (API Keys).
+
+- Local: in `api/.env`
+  ```
+  CLOUDINARY_CLOUD_NAME="your-cloud-name"
+  CLOUDINARY_API_KEY="123456789012345"
+  CLOUDINARY_API_SECRET="your-api-secret"
+  ```
+  then restart the API
+- Render: the API service > Environment > add the same three variables > Save (Render redeploys)
+
+### Deploying the admin panel on Vercel
+
+- New Project > import the repository > **Root Directory: `admin`** (framework: Next.js, default
+  build settings)
+- Environment variable: `NEXT_PUBLIC_API_URL=https://guessup-api-krgb.onrender.com/api`
+  (it is built into the bundle, so redeploy after changing it)
+- The API allows any origin (CORS), so no API change is needed for the Vercel address
+
+### Mobile builds
+
+`mobile/eas.json` sets `EXPO_PUBLIC_API_URL=https://guessup-api-krgb.onrender.com/api` for the
+`preview` and `production` profiles, so a fresh APK starts on the deployed API. The address can
+still be changed on the app's API address screen.
+
+### Notes
+
+- Re-running the seed updates the 105 seeded items (matched by `seedKey`) back to the seed's text,
+  so edit seeded items in `api/prisma/seed-data/questions.ts` if the change must survive a re-seed.
+  It no longer reactivates seeded items an administrator deactivated, and categories and questions
+  added in the panel are left alone
+- A question deactivated while a student is in the middle of a round stays in that round; it is
+  left out of every round started afterwards
 
 ---
 
@@ -97,7 +180,7 @@ Not built yet: admin CRUD screens, reports.
 ```bash
 # 1. Database URL
 cd api
-cp .env.example .env          # then edit DATABASE_URL
+cp .env.example .env          # then edit DATABASE_URL and the SEED_* account variables
 
 # 2. API
 npm install                   # also runs prisma generate
@@ -142,8 +225,10 @@ database structure.
 ```bash
 # api/
 npm run start:dev        # watch mode
-npm test                 # unit tests (game rules, badges, round logic, auth service)
-npm run test:e2e         # auth + a full game round, needs the seeded database and JWT_SECRET in .env
+npm run admin:set-password   # change an administrator's password (see "Accounts")
+npm test                 # unit tests (game rules, badges, round logic, auth, admin rules, reports, CSV)
+npm run test:e2e         # auth, gameplay, student side and admin API; needs the seeded question bank and JWT_SECRET in .env
+                         # (the tests make their own e2e-…@example.com accounts and delete them)
 npm run prisma:studio    # browse the data
 npm run prisma:seed      # re-run the seed (safe to repeat)
 npm run prisma:reset     # drop, re-migrate and re-seed
@@ -153,12 +238,29 @@ npm run typecheck
 npm run build:apk        # eas build -p android --profile preview
 ```
 
-## Demo accounts (seeded)
+## Accounts
 
-| Role          | Email                   | Password     |
-| ------------- | ----------------------- | ------------ |
-| Administrator | admin@jhcsc.edu.ph      | `admin123`   |
-| Student       | student@jhcsc.edu.ph    | `student123` |
+No passwords are kept in the repository. The seed creates an administrator and a demo student
+only from these variables in `api/.env` (see `api/.env.example`):
+
+| Account       | Variables                                       | Password length |
+| ------------- | ----------------------------------------------- | --------------- |
+| Administrator | `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`       | at least 10     |
+| Demo student  | `SEED_STUDENT_EMAIL`, `SEED_STUDENT_PASSWORD`   | at least 8      |
+
+When a variable is missing the account is skipped with a message (there is no default password).
+An account that already exists keeps its password: re-running the seed never changes it.
+
+To change an administrator's password (for example on the deployed database), from `api/`:
+
+```bash
+read -rs NEW_ADMIN_PASSWORD && export NEW_ADMIN_PASSWORD   # type it; nothing is shown or saved in history
+ADMIN_EMAIL=<admin email> npm run admin:set-password
+unset NEW_ADMIN_PASSWORD
+```
+
+It only changes an account with the ADMIN role, needs at least 10 characters and never prints
+the password. Students change theirs in the app (Profile > Change password).
 
 Passwords are hashed with bcrypt (cost 10) before storage, as stated in Chapter II.
 

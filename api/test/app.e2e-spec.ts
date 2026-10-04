@@ -4,12 +4,15 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import { Roles } from './../src/auth/roles.decorator.js';
 import { PrismaService } from './../src/prisma/prisma.service.js';
-import { createApp } from './helpers.js';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { createApp, createTestAccount, deleteTestAccounts, type TestAccount } from './helpers.js';
 
 /**
  * End-to-end checks for the health and auth endpoints.
  * Needs a reachable, seeded DATABASE_URL and JWT_SECRET, so run it with the
- * database up:
+ * database up. It makes its own student and administrator (random passwords)
+ * instead of using the seeded demo accounts:
  *   npm run test:e2e
  */
 
@@ -23,24 +26,37 @@ class AdminOnlyController {
   }
 }
 
-const STUDENT = { email: 'student@jhcsc.edu.ph', password: 'student123' };
-const ADMIN = { email: 'admin@jhcsc.edu.ph', password: 'admin123' };
 
 describe('GuessUp API (e2e)', () => {
   let app: NestExpressApplication;
   let http: App;
   let prisma: PrismaService;
-  const throwawayEmail = `e2e-${Date.now()}@example.com`;
+  const stamp = Date.now();
+  const throwawayEmail = `e2e-${stamp}@example.com`;
+  /** Must be refused; listed in the cleanup in case that ever regresses. */
+  const sneakyEmail = `e2e-sneaky-${stamp}@example.com`;
+
+  let STUDENT: { email: string; password: string };
+  let ADMIN: { email: string; password: string };
+  const accounts: TestAccount[] = [];
 
   beforeAll(async () => {
     app = await createApp([AdminOnlyController]);
     http = app.getHttpServer() as App;
     prisma = app.get(PrismaService);
-  });
+    for (const [role, label] of [['STUDENT', 'auth-student'], ['ADMIN', 'auth-admin']] as const) {
+      accounts.push(await createTestAccount(prisma, role, label));
+    }
+    STUDENT = { email: accounts[0]!.email, password: accounts[0]!.password };
+    ADMIN = { email: accounts[1]!.email, password: accounts[1]!.password };
+  }, 60_000);
 
   afterAll(async () => {
-    await prisma.user.deleteMany({ where: { email: throwawayEmail } });
-    await app.close();
+    // Everything this file registers uses an e2e-...@example.com address with this run's stamp.
+    if (prisma) {
+      await deleteTestAccounts(prisma, [throwawayEmail, sneakyEmail, ...accounts.map((a) => a.email)]);
+    }
+    await app?.close();
   });
 
   it('/api/health (GET) is public', () => {
@@ -58,7 +74,7 @@ describe('GuessUp API (e2e)', () => {
       const res = await request(http)
         .post('/api/auth/register')
         .send({
-          fullName: 'E2E Throwaway',
+          fullName: 'e2e-throwaway',
           email: `  ${throwawayEmail.toUpperCase()} `,
           password: 'longenough',
           yearLevel: '1st Year',
@@ -67,7 +83,7 @@ describe('GuessUp API (e2e)', () => {
 
       expect(res.body.accessToken).toBeTypeOf('string');
       expect(res.body.user).toMatchObject({
-        fullName: 'E2E Throwaway',
+        fullName: 'e2e-throwaway',
         email: throwawayEmail,
         role: 'STUDENT',
         yearLevel: '1st Year',
@@ -79,7 +95,7 @@ describe('GuessUp API (e2e)', () => {
     it('rejects a duplicate email with 409', async () => {
       const res = await request(http)
         .post('/api/auth/register')
-        .send({ fullName: 'Again', email: throwawayEmail, password: 'longenough', yearLevel: '1st Year' })
+        .send({ fullName: 'e2e-again', email: throwawayEmail, password: 'longenough', yearLevel: '1st Year' })
         .expect(409);
       expect(res.body.message).toBe('That email is already registered.');
     });
@@ -88,8 +104,8 @@ describe('GuessUp API (e2e)', () => {
       await request(http)
         .post('/api/auth/register')
         .send({
-          fullName: 'Sneaky',
-          email: `sneaky-${throwawayEmail}`,
+          fullName: 'e2e-sneaky',
+          email: sneakyEmail,
           password: 'longenough',
           yearLevel: '1st Year',
           role: 'ADMIN',
@@ -101,7 +117,7 @@ describe('GuessUp API (e2e)', () => {
   describe('login and /me', () => {
     let studentToken: string;
 
-    it('logs in the seeded student', async () => {
+    it('logs in a student', async () => {
       const res = await request(http).post('/api/auth/login').send(STUDENT).expect(200);
       studentToken = res.body.accessToken;
       expect(studentToken).toBeTypeOf('string');
@@ -193,5 +209,38 @@ describe('GuessUp API (e2e)', () => {
     } finally {
       await fresh.close();
     }
+  });
+  describe('npm run admin:set-password (scripts/set-admin-password.ts)', () => {
+    const run = (env: Record<string, string>) =>
+      promisify(execFile)('npx', ['tsx', 'scripts/set-admin-password.ts'], {
+        cwd: process.cwd(),
+        env: { ...process.env, ...env },
+      }).then(
+        (r) => ({ code: 0, out: r.stdout + r.stderr }),
+        (e: { code: number; stdout: string; stderr: string }) => ({ code: e.code, out: e.stdout + e.stderr }),
+      );
+
+    it('changes only an administrator password, never printing it', async () => {
+      const admin = await createTestAccount(prisma, 'ADMIN', 'script-admin');
+      accounts.push(admin);
+      const newPassword = `e2e-${Date.now()}-new-pass`;
+
+      const short = await run({ ADMIN_EMAIL: admin.email, NEW_ADMIN_PASSWORD: 'short' });
+      expect(short.code).toBe(1);
+      expect(short.out).toContain('at least 10 characters');
+
+      const student = await run({ ADMIN_EMAIL: STUDENT.email, NEW_ADMIN_PASSWORD: newPassword });
+      expect(student.code).toBe(1);
+      expect(student.out).toContain('is not an administrator account');
+      await request(http).post('/api/auth/login').send(STUDENT).expect(200);
+
+      const ok = await run({ ADMIN_EMAIL: admin.email.toUpperCase(), NEW_ADMIN_PASSWORD: newPassword });
+      expect(ok.code).toBe(0);
+      expect(ok.out).toContain(`Success: the password of ${admin.email} was changed.`);
+      expect(ok.out).not.toContain(newPassword);
+
+      await request(http).post('/api/auth/login').send({ email: admin.email, password: admin.password }).expect(401);
+      await request(http).post('/api/auth/login').send({ email: admin.email, password: newPassword }).expect(200);
+    }, 120_000);
   });
 });

@@ -7,10 +7,18 @@
     },
     "preview": {
       "distribution": "internal",
-      "android": { "buildType": "apk" }
+      "android": { "buildType": "apk" },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://guessup-api-krgb.onrender.com/api",
+        "EXPO_PUBLIC_SHOW_DEMO_LOGIN": "false"
+      }
     },
     "production": {
-      "android": { "buildType": "app-bundle" }
+      "android": { "buildType": "app-bundle" },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://guessup-api-krgb.onrender.com/api",
+        "EXPO_PUBLIC_SHOW_DEMO_LOGIN": "false"
+      }
     }
   },
   "submit": { "production": {} }
