@@ -7,3 +7,6 @@ export const NAV = [
   { href: "/sessions", icon: "🎮", label: "Game Sessions" },
   { href: "/reports", icon: "📑", label: "Reports" },
 ] as const;
+
+/** The signed-in administrator's own page (header name, sidebar bottom). */
+export const ACCOUNT_NAV = { href: "/account", icon: "👤", label: "My account" } as const;

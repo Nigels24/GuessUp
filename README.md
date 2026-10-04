@@ -251,7 +251,12 @@ only from these variables in `api/.env` (see `api/.env.example`):
 When a variable is missing the account is skipped with a message (there is no default password).
 An account that already exists keeps its password: re-running the seed never changes it.
 
-To change an administrator's password (for example on the deployed database), from `api/`:
+**Administrators change their own password and name in the panel**: click your name in the top
+right (or **My account** at the bottom of the sidebar). A new administrator password needs at least
+10 characters and must differ from the current one; a wrong current password is refused.
+
+The script below is **only for recovery**, when an administrator has forgotten the password and
+cannot sign in. It sets a new one directly in the database (`DATABASE_URL`), from `api/`:
 
 ```bash
 read -rs NEW_ADMIN_PASSWORD && export NEW_ADMIN_PASSWORD   # type it; nothing is shown or saved in history

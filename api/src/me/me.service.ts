@@ -6,6 +6,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import type { ChangePasswordDto } from './dto/change-password.dto.js';
 import type { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { buildProgress, type MeProgress } from './me.progress.js';
+import { newPasswordProblem, profileProblem, samePasswordProblem } from './me.rules.js';
 import { buildSummary, type MeSummary } from './me.summary.js';
 
 /** Wording copied from the prototype's Change password dialog. */
@@ -81,7 +82,10 @@ export class MeService {
   }
 
   /** The prototype's Edit profile. Returns the updated user. */
+  /** Students: full name and year level. Administrators (the panel's My account): full name. */
   async updateProfile(user: PublicUser, dto: UpdateProfileDto): Promise<PublicUser> {
+    const problem = profileProblem(user.role, dto);
+    if (problem) throw new BadRequestException(problem);
     const updated = await this.prisma.user.update({
       where: { id: user.id },
       data: { fullName: dto.fullName, yearLevel: dto.yearLevel },
@@ -93,7 +97,10 @@ export class MeService {
    * The prototype's Change password. A wrong current password is a 400, not a
    * 401: the apps sign the user out on any 401.
    */
+  /** Any role. Administrators need 10+ characters and a password different from the current one. */
   async changePassword(user: PublicUser, dto: ChangePasswordDto): Promise<void> {
+    const tooShort = newPasswordProblem(user.role, dto.newPassword);
+    if (tooShort) throw new BadRequestException(tooShort);
     const { passwordHash } = await this.prisma.user.findUniqueOrThrow({
       where: { id: user.id },
       select: { passwordHash: true },
@@ -101,6 +108,8 @@ export class MeService {
     if (!(await this.auth.verifyPassword(dto.currentPassword, passwordHash))) {
       throw new BadRequestException(ME_MESSAGES.wrongPassword);
     }
+    const same = samePasswordProblem(user.role, dto.currentPassword, dto.newPassword);
+    if (same) throw new BadRequestException(same);
     await this.prisma.user.update({
       where: { id: user.id },
       data: { passwordHash: await this.auth.hashPassword(dto.newPassword) },

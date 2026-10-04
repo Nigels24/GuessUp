@@ -249,8 +249,7 @@ describe('Student side: leaderboard, progress, profile (e2e)', () => {
       expect(user).toMatchObject({ email: emails[0], role: 'STUDENT', fullName: 'e2e-edited-player' });
     });
 
-    it('is for students only', async () => {
-      await request(http).patch('/api/me').set(auth(adminToken)).send({ fullName: 'Admin' }).expect(403);
+    it('needs a token', async () => {
       await request(http).patch('/api/me').send({ fullName: 'Nobody' }).expect(401);
     });
   });
@@ -297,12 +296,78 @@ describe('Student side: leaderboard, progress, profile (e2e)', () => {
         .expect(401);
     });
 
-    it('is for students only', async () => {
+    it('a student cannot change another user\'s password', async () => {
+      // The route only ever changes the caller's own password; naming someone else is refused.
+      for (const extra of [{ userId: idB }, { email: emails[1] }]) {
+        await request(http)
+          .post('/api/me/password')
+          .set(auth(tokenA))
+          .send({ currentPassword: PASSWORD, newPassword: 'taken-over-pass', ...extra })
+          .expect(400);
+      }
+      await request(http).post('/api/auth/login').send({ email: emails[1], password: 'brand-new-pass' }).expect(200);
+      await request(http).post('/api/auth/login').send({ email: emails[0], password: 'taken-over-pass' }).expect(401);
+    });
+  });
+  describe('My account for administrators (PATCH /api/me, POST /api/me/password)', () => {
+    let own: TestAccount;
+    let ownToken: string;
+
+    beforeAll(async () => {
+      own = await createTestAccount(prisma, 'ADMIN', 'account-admin');
+      ownToken = (await request(http).post('/api/auth/login').send({ email: own.email, password: own.password }).expect(200))
+        .body.accessToken;
+    }, 60_000);
+
+    afterAll(async () => {
+      if (own) await deleteTestAccounts(prisma, [own.email]);
+    });
+
+    it('edits the full name; an administrator has no year level', async () => {
+      const res = await request(http).patch('/api/me').set(auth(ownToken)).send({ fullName: '  e2e-renamed-admin ' }).expect(200);
+      expect(res.body).toMatchObject({ id: own.id, fullName: 'e2e-renamed-admin', role: 'ADMIN', yearLevel: null });
+      const bad = await request(http).patch('/api/me').set(auth(ownToken)).send({ yearLevel: '1st Year' }).expect(400);
+      expect(bad.body.message).toBe('Administrator accounts have no year level.');
+    });
+
+    it('refuses a wrong current password, a short one and the same one (400)', async () => {
+      const wrong = await request(http)
+        .post('/api/me/password')
+        .set(auth(ownToken))
+        .send({ currentPassword: 'not-my-password', newPassword: 'a-long-new-password' })
+        .expect(400);
+      expect(wrong.body.message).toBe('Current password is incorrect.');
+
+      const short = await request(http)
+        .post('/api/me/password')
+        .set(auth(ownToken))
+        .send({ currentPassword: own.password, newPassword: '123456789' })
+        .expect(400);
+      expect(short.body.message).toBe('Administrator passwords must be at least 10 characters.');
+
+      const same = await request(http)
+        .post('/api/me/password')
+        .set(auth(ownToken))
+        .send({ currentPassword: own.password, newPassword: own.password })
+        .expect(400);
+      expect(same.body.message).toBe('The new password must be different from the current password.');
+    });
+
+    it('changes the password: the old one fails, the new one works, and the session stays', async () => {
+      const newPassword = `e2e-${Date.now()}-admin-pass`;
       await request(http)
         .post('/api/me/password')
-        .set(auth(adminToken))
-        .send({ currentPassword: adminAccount!.password, newPassword: 'whatever-long' })
-        .expect(403);
+        .set(auth(ownToken))
+        .send({ currentPassword: own.password, newPassword })
+        .expect(204);
+      await request(http).post('/api/auth/login').send({ email: own.email, password: own.password }).expect(401);
+      await request(http).post('/api/auth/login').send({ email: own.email, password: newPassword }).expect(200);
+      await request(http).get('/api/auth/me').set(auth(ownToken)).expect(200);
+    });
+
+    it('progress and summary stay student-only', async () => {
+      await request(http).get('/api/me/summary').set(auth(ownToken)).expect(403);
+      await request(http).get('/api/me/progress').set(auth(ownToken)).expect(403);
     });
   });
 });

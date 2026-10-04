@@ -159,6 +159,81 @@ export function LoadError({ message, onRetry }: { message: string; onRetry: () =
   );
 }
 
+/* ---------- password field ---------- */
+
+/**
+ * A password input with an eye button that shows or hides the text, as in the
+ * mobile app (open eye = show, crossed-out eye = hide). Hidden by default. The
+ * button never submits the form, and toggling keeps focus and the cursor in the field.
+ */
+export function PasswordInput({
+  id,
+  name,
+  value,
+  onChange,
+  autoComplete,
+  disabled,
+}: {
+  id: string;
+  name: string;
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: "current-password" | "new-password";
+  disabled?: boolean;
+}) {
+  const [visible, setVisible] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+
+  function toggle() {
+    const el = input.current;
+    const start = el?.selectionStart ?? value.length;
+    const end = el?.selectionEnd ?? value.length;
+    setVisible((v) => !v);
+    // Changing the input type can move the caret; put focus and selection back after the re-render.
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(start, end);
+    });
+  }
+
+  return (
+    <div className="relative">
+      <input
+        ref={input}
+        className="input pr-12"
+        id={id}
+        name={name}
+        type={visible ? "text" : "password"}
+        value={value}
+        maxLength={72}
+        autoComplete={autoComplete}
+        autoCapitalize="none"
+        autoCorrect="off"
+        spellCheck={false}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <button
+        type="button"
+        className="icon-btn absolute right-1.5 top-1/2 -translate-y-1/2"
+        aria-label={visible ? "Hide password" : "Show password"}
+        aria-controls={id}
+        title={visible ? "Hide password" : "Show password"}
+        disabled={disabled}
+        // Keep focus in the field when clicked with the mouse.
+        onMouseDown={(e) => e.preventDefault()}
+        onClick={toggle}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+          <circle cx="12" cy="12" r="3" />
+          {visible && <path d="M3 3l18 18" />}
+        </svg>
+      </button>
+    </div>
+  );
+}
+
 /* ---------- modal ---------- */
 
 export function Modal({

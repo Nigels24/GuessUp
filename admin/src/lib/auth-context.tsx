@@ -22,6 +22,8 @@ interface AuthState {
   ready: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
+  /** Replaces the signed-in user after a profile change, so the header updates at once. */
+  updateUser: (user: User) => void;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -73,7 +75,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(res.user);
   }, []);
 
-  const value = useMemo(() => ({ user, token, ready, login, logout }), [user, token, ready, login, logout]);
+  const updateUser = useCallback(
+    (fresh: User) => {
+      setUser(fresh);
+      if (token) storeSession(token, fresh);
+    },
+    [token],
+  );
+
+  const value = useMemo(
+    () => ({ user, token, ready, login, logout, updateUser }),
+    [user, token, ready, login, logout, updateUser],
+  );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

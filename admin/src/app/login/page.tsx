@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
+import { PasswordInput } from "@/components/ui";
 import { useAuth } from "@/lib/auth-context";
 
 const SCHOOL = "J.H. Cerilles State College – Dumingag Campus";
@@ -89,6 +90,7 @@ export default function LoginPage() {
               <input
                 className="input"
                 id="em"
+                name="email"
                 type="email"
                 autoComplete="username"
                 placeholder="admin@jhcsc.edu.ph"
@@ -98,14 +100,7 @@ export default function LoginPage() {
             </div>
             <div className="field">
               <label htmlFor="pw">Password</label>
-              <input
-                className="input"
-                id="pw"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <PasswordInput id="pw" name="password" value={password} onChange={setPassword} autoComplete="current-password" />
             </div>
             <div className="error-text" role="alert">
               {error}

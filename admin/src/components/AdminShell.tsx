@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import type { User } from "@/lib/api";
-import { NAV } from "./nav";
+import { ACCOUNT_NAV, NAV } from "./nav";
 
 const SCHOOL = "J.H. Cerilles State College – Dumingag Campus";
 
@@ -30,7 +30,8 @@ export function AdminShell({
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
-  const title = NAV.find((n) => pathname.startsWith(n.href))?.label ?? "GuessUp";
+  const title = [...NAV, ACCOUNT_NAV].find((n) => pathname.startsWith(n.href))?.label ?? "GuessUp";
+  const onAccount = pathname.startsWith(ACCOUNT_NAV.href);
 
   return (
     <div className="flex min-h-screen bg-panel">
@@ -64,7 +65,17 @@ export function AdminShell({
             );
           })}
         </nav>
-        <div className="mt-auto border-t border-white/10 px-2 pt-3 text-xs">{SCHOOL}</div>
+        <Link
+          href={ACCOUNT_NAV.href}
+          onClick={() => setMenuOpen(false)}
+          className={`mb-3 mt-auto flex items-center gap-3 rounded-xl px-3 py-2.5 text-[14.5px] font-bold no-underline ${
+            onAccount ? "bg-brand text-white" : "text-sidebar-text hover:bg-white/5 hover:text-white"
+          }`}
+        >
+          <span className="w-[22px] text-center">{ACCOUNT_NAV.icon}</span>
+          {ACCOUNT_NAV.label}
+        </Link>
+        <div className="border-t border-white/10 px-2 pt-3 text-xs">{SCHOOL}</div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col" onClick={() => setMenuOpen(false)}>
@@ -81,14 +92,20 @@ export function AdminShell({
           </button>
           <h1 className="flex-1 text-[22px]">{title}</h1>
           <div className="flex items-center gap-2.5 text-[13px]">
-            <span className="hidden text-right min-[861px]:inline">
-              <b>{user.fullName}</b>
-              <br />
-              <span className="text-muted">Administrator</span>
-            </span>
-            <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-brand font-display text-[13px] font-extrabold text-white">
-              {initials(user.fullName)}
-            </span>
+            <Link
+              href={ACCOUNT_NAV.href}
+              title="My account"
+              className="flex items-center gap-2.5 rounded-xl px-1.5 py-1 text-ink no-underline hover:bg-brand-soft"
+            >
+              <span className="hidden text-right min-[861px]:inline">
+                <b>{user.fullName}</b>
+                <br />
+                <span className="text-muted">Administrator</span>
+              </span>
+              <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-brand font-display text-[13px] font-extrabold text-white">
+                {initials(user.fullName)}
+              </span>
+            </Link>
             <button className="btn btn-ghost btn-sm" onClick={() => setConfirming(true)}>
               Log out
             </button>

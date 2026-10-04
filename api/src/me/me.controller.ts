@@ -22,31 +22,37 @@ const PASSWORD_THROTTLE = {
   },
 };
 
-/** The signed-in student's own data. */
-@Roles('STUDENT')
+/**
+ * The signed-in user's own data. Progress is for students; the profile and
+ * password routes serve students (app) and administrators (panel's My account).
+ */
 @Controller('me')
 export class MeController {
   constructor(private readonly me: MeService) {}
 
   /** GET /api/me/summary — points, rounds, badges and per-category progress (completed rounds only). */
+  @Roles('STUDENT')
   @Get('summary')
   summary(@CurrentUser() user: PublicUser): Promise<MeSummary> {
     return this.me.summary(user);
   }
 
   /** GET /api/me/progress — the My Progress screen (completed rounds only). */
+  @Roles('STUDENT')
   @Get('progress')
   progress(@CurrentUser() user: PublicUser): Promise<MeProgress> {
     return this.me.progress(user);
   }
 
-  /** PATCH /api/me — Edit profile (full name, year level). */
+  /** PATCH /api/me — Edit profile (full name; students also year level). */
+  @Roles('STUDENT', 'ADMIN')
   @Patch()
   update(@CurrentUser() user: PublicUser, @Body() dto: UpdateProfileDto): Promise<PublicUser> {
     return this.me.updateProfile(user, dto);
   }
 
   /** POST /api/me/password — Change password. 204 on success. */
+  @Roles('STUDENT', 'ADMIN')
   @UseGuards(ThrottlerGuard)
   @Throttle(PASSWORD_THROTTLE)
   @Post('password')
