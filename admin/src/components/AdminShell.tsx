@@ -5,17 +5,9 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import type { User } from "@/lib/api";
 import { ACCOUNT_NAV, NAV } from "./nav";
+import { Avatar } from "./ui";
 
 const SCHOOL = "J.H. Cerilles State College – Dumingag Campus";
-
-function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter((part) => /^[A-Za-z]/.test(part) && !part.endsWith("."))
-    .slice(0, 2)
-    .map((part) => part[0]!.toUpperCase())
-    .join("");
-}
 
 /** Sidebar and top bar of the prototype's administrator panel. */
 export function AdminShell({
@@ -36,7 +28,7 @@ export function AdminShell({
   return (
     <div className="flex min-h-screen bg-panel">
       <aside
-        className={`fixed left-0 top-0 z-[100] flex h-screen w-[248px] shrink-0 flex-col bg-sidebar px-3.5 py-5 text-sidebar-text transition-transform min-[861px]:sticky min-[861px]:translate-x-0 ${
+        className={`fixed left-0 top-0 z-[100] flex h-screen w-[248px] shrink-0 min-[861px]:max-[1100px]:w-[216px] flex-col bg-sidebar px-3.5 py-5 text-sidebar-text transition-transform min-[861px]:sticky min-[861px]:translate-x-0 ${
           menuOpen ? "translate-x-0 shadow-lg" : "-translate-x-full"
         }`}
       >
@@ -102,9 +94,7 @@ export function AdminShell({
                 <br />
                 <span className="text-muted">Administrator</span>
               </span>
-              <span className="grid h-9 w-9 place-items-center rounded-[11px] bg-brand font-display text-[13px] font-extrabold text-white">
-                {initials(user.fullName)}
-              </span>
+              <Avatar name={user.fullName} src={user.avatarUrl} className="!h-9 !w-9 !rounded-[11px] !text-[13px]" />
             </Link>
             <button className="btn btn-ghost btn-sm" onClick={() => setConfirming(true)}>
               Log out

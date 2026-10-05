@@ -10,8 +10,8 @@ import type { CategoryRef } from "@/lib/types";
 export function CatPill({ category }: { category: CategoryRef | null | undefined }) {
   if (!category) return <span className="pill pill-gray">—</span>;
   return (
-    <span className="pill" style={{ background: `${category.color}1f`, color: category.color }}>
-      {category.icon} {category.name}
+    <span className="pill" title={category.name} style={{ background: `${category.color}1f`, color: category.color }}>
+      {category.icon} <span className="pill-text">{category.name}</span>
     </span>
   );
 }
@@ -36,24 +36,27 @@ export function StatusPill({ status }: { status: SessionStatus }) {
 
 /* ---------- small building blocks ---------- */
 
-/** A student's photo, or their initials when there is none or it cannot load. */
+/** A user's photo, or their initials when there is none or it cannot load. */
 export function Avatar({
   name,
   src,
   inactive = false,
   large = false,
+  className = "",
 }: {
   name: string;
-  /** avatarUrl from the API (students' profile photos). */
+  /** avatarUrl from the API. */
   src?: string | null;
   inactive?: boolean;
   large?: boolean;
+  /** Extra classes (size or shape) for the header and My account. */
+  className?: string;
 }) {
   const [failed, setFailed] = useState<string | null>(null);
   const photo = src && failed !== src ? src : null;
   return (
     <span
-      className={`avatar${large ? " avatar-lg" : ""}`}
+      className={`avatar${large ? " avatar-lg" : ""} ${className}`.trim()}
       style={inactive && !photo ? { background: "#94A3B8" } : undefined}
     >
       {photo ? (

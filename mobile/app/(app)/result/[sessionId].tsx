@@ -10,6 +10,7 @@
  */
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
@@ -19,6 +20,7 @@ import {
   LoadingView,
   Pill,
 } from '../../../src/components/ui';
+import { Bounce, Confetti, PopIn } from '../../../src/components/motion';
 import { apiErrorMessage } from '../../../src/lib/api';
 import { dur } from '../../../src/lib/format';
 import {
@@ -121,7 +123,9 @@ export default function ResultScreen() {
         </View>
 
         <View style={s.hero}>
-          <Text style={s.trophy}>{trophy(session.accuracy)}</Text>
+          <Bounce>
+            <Text style={s.trophy}>{trophy(session.accuracy)}</Text>
+          </Bounce>
           <Text style={s.message}>{message(session.accuracy)}</Text>
           <View style={s.heroMeta}>
             <Text style={s.heroCategory}>
@@ -169,14 +173,21 @@ export default function ResultScreen() {
             <Text style={[s.sectionHeading, { marginTop: 6 }]}>
               🎖️ New badge{newBadges.length > 1 ? 's' : ''} unlocked!
             </Text>
-            {newBadges.map((badge) => (
-              <View key={badge.code} style={s.newBadge}>
-                <Text style={s.badgeIcon}>{badge.icon}</Text>
-                <View style={s.flex}>
-                  <Text style={s.bold}>{badge.name}</Text>
-                  <Text style={s.small}>{badge.description}</Text>
-                </View>
-              </View>
+            {newBadges.map((badge, i) => (
+              <PopIn key={badge.code} duration={400} delay={300 + i * 150}>
+                <LinearGradient
+                  colors={[GOLD_FROM, GOLD_TO]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={s.newBadge}
+                >
+                  <Text style={s.badgeIcon}>{badge.icon}</Text>
+                  <View style={s.flex}>
+                    <Text style={s.bold}>{badge.name}</Text>
+                    <Text style={s.small}>{badge.description}</Text>
+                  </View>
+                </LinearGradient>
+              </PopIn>
             ))}
           </>
         ) : null}
@@ -224,9 +235,15 @@ export default function ResultScreen() {
           />
         </View>
       </ScrollView>
+      {/* As in the prototype: confetti once, right after a round of 80 % or more. */}
+      {isFresh && session.accuracy >= 80 ? <Confetti /> : null}
     </SafeAreaView>
   );
 }
+
+/** The prototype's .new-badge gradient (135°). */
+const GOLD_FROM = '#FFF7DB';
+const GOLD_TO = '#FFE9A8';
 
 function Stat({ value, label, color }: { value: string; label: string; color?: string }) {
   return (
@@ -302,8 +319,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    // The prototype's #FFF7DB → #FFE9A8 gradient as one color.
-    backgroundColor: colors.newBadge,
+    backgroundColor: colors.newBadge, // under the gradient
     borderRadius: 18,
     paddingVertical: 12,
     paddingHorizontal: 14,

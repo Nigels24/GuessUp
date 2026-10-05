@@ -99,11 +99,12 @@ export class MeController {
 
   /**
    * POST /api/me/avatar (multipart, field "file") -> the updated user.
-   * Students only. JPG, PNG or WebP up to 2 MB; Cloudinary stores it as a
+   * Students (app) and administrators (panel's My account), always for the
+   * signed-in user only. JPG, PNG or WebP up to 2 MB; Cloudinary stores it as a
    * 512×512 square. Replaces (and deletes) the previous photo. 503 when
    * Cloudinary is not configured on the server.
    */
-  @Roles('STUDENT')
+  @Roles('STUDENT', 'ADMIN')
   @UseGuards(ThrottlerGuard)
   @Throttle(AVATAR_THROTTLE)
   @Post('avatar')
@@ -116,8 +117,8 @@ export class MeController {
     return this.me.uploadAvatar(user, file);
   }
 
-  /** DELETE /api/me/avatar — back to the initials. 204, also when there was no photo. */
-  @Roles('STUDENT')
+  /** DELETE /api/me/avatar — back to the initials (own photo only). 204, also when there was no photo. */
+  @Roles('STUDENT', 'ADMIN')
   @UseGuards(ThrottlerGuard)
   @Throttle(AVATAR_THROTTLE)
   @Delete('avatar')

@@ -26,7 +26,7 @@ export interface User {
   role: Role;
   yearLevel: string | null;
   status: "ACTIVE" | "INACTIVE";
-  /** Students' profile photo; always null for administrators. */
+  /** Profile photo; null shows the initials. */
   avatarUrl?: string | null;
 }
 

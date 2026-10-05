@@ -7,6 +7,7 @@
  * `?cat=<id>` (the prototype's #/s/home?cat=, used by "Play now" and
  * "Practice" on other tabs) opens the level picker for that category.
  */
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
@@ -152,7 +153,12 @@ export default function HomeScreen() {
 
         {error ? <ErrorText>{error}</ErrorText> : null}
 
-        <View style={s.hero}>
+        <LinearGradient
+          colors={[colors.brand, HERO_TO]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={s.hero}
+        >
           <Text style={s.heroMark}>?</Text>
           <Text style={s.heroTitle}>Ready to guess?</Text>
           <Text style={s.heroSub}>Pick a subject, choose a level, and beat the timer.</Text>
@@ -164,7 +170,7 @@ export default function HomeScreen() {
               label="Badges"
             />
           </View>
-        </View>
+        </LinearGradient>
 
         <View style={s.sectionTitle}>
           <Text style={s.sectionHeading}>Subject categories</Text>
@@ -267,6 +273,9 @@ const cardShadow = {
   elevation: 2,
 } as const;
 
+/** The prototype's .hero-card gradient: #6C4CF1 → #9B6BFF at 135°. */
+const HERO_TO = '#9B6BFF';
+
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   screen: { paddingHorizontal: 18, paddingTop: 6 },
@@ -281,8 +290,7 @@ const s = StyleSheet.create({
   greet: { color: colors.muted, fontWeight: '700' },
   name: { fontSize: 24, fontWeight: '800', color: colors.ink },
   hero: {
-    // The prototype's 135° gradient (#6C4CF1 → #9B6BFF) as its first color;
-    // no gradient library is installed.
+    // Under the 135° gradient, so Android's elevation shadow has a surface.
     backgroundColor: colors.brand,
     borderRadius: 24,
     padding: 18,

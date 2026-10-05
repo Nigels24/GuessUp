@@ -96,8 +96,10 @@
   .input:disabled { @apply cursor-not-allowed bg-[#F6F5FB] text-muted; }
 
   .pill {
-    @apply inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-[3px] text-xs font-extrabold;
+    @apply inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-[3px] text-xs font-extrabold;
   }
+  /* Long category names shorten with "…" when their cell is narrow. */
+  .pill-text { @apply min-w-0 overflow-hidden text-ellipsis; }
   .pill-ok { background: var(--ok-soft); color: #15803d; }
   .pill-bad { background: var(--bad-soft); color: #b91c1c; }
   .pill-warn { background: var(--warn-soft); color: #b45309; }
@@ -113,6 +115,8 @@
   .kpi b { @apply block font-display text-[26px] leading-[1.1]; }
   .kpi span.l { @apply text-[12.5px] font-bold text-muted; }
   .grid-2 { @apply grid gap-[18px]; grid-template-columns: 1.3fr 1fr; }
+  /* Grid items may shrink below their content, so a wide table scrolls inside its card. */
+  .grid-2 > * { min-width: 0; }
   @media (max-width: 1000px) { .grid-2 { grid-template-columns: 1fr; } }
   .panel-head { @apply flex flex-wrap items-center justify-between gap-2.5 px-[18px] pb-2 pt-4; }
   .panel-head h3 { font-size: 17px; }
@@ -133,6 +137,16 @@
   .tbl tbody tr:hover { @apply bg-[#FBFAFF]; }
   .tbl .q-cell { max-width: 320px; }
   .tbl .q-cell b { @apply block overflow-hidden text-ellipsis whitespace-nowrap font-bold; }
+  /* Fixed column widths (set with <colgroup>): cells truncate instead of pushing the table wider. */
+  .tbl-fixed { table-layout: fixed; }
+  .tbl-fixed .q-cell { max-width: none; }
+  .tbl-fixed .q-cell span { @apply block overflow-hidden text-ellipsis whitespace-nowrap; }
+  /* Dashboard "Recent game sessions": two compact lines per round. */
+  .recent-row { @apply flex items-center gap-2.5; }
+  .recent-row .who { @apply min-w-0 flex-1; }
+  .recent-row .who b { @apply block overflow-hidden text-ellipsis whitespace-nowrap text-sm; }
+  .recent-row .who .pill { @apply mt-1; }
+  .recent-row .stats { @apply grid shrink-0 items-center justify-items-end gap-x-2 gap-y-1; grid-template-columns: auto auto; }
   .tbl .actions { @apply whitespace-nowrap text-right; }
   .user-cell { @apply flex items-center gap-2.5; }
   .user-cell b { @apply block text-sm; }
@@ -150,8 +164,10 @@
   .bar-track { @apply h-3.5 overflow-hidden rounded-lg bg-[#F0EEF9]; }
   .bar-track i { @apply block h-full rounded-lg; }
   .bar-row .v { @apply text-right; }
-  .cols { @apply flex h-40 items-end gap-1.5 pt-2.5; }
-  .cols .col { @apply flex h-full flex-1 flex-col items-center justify-end gap-1; }
+  .cols { @apply flex h-40 items-end overflow-x-auto pt-2.5; gap: clamp(2px, 0.8%, 6px); }
+  /* Columns shrink to fit up to 30 days; only a very narrow card scrolls the chart. */
+  .cols .col { @apply flex h-full min-w-[12px] flex-1 flex-col items-center justify-end gap-1; }
+  .cols .col em, .cols .col span { white-space: nowrap; }
   .cols .col i { @apply w-full max-w-[28px] rounded-t-md rounded-b-[3px] bg-brand; min-height: 3px; }
   .cols .col span { @apply text-[10px] font-bold text-muted; }
   .cols .col em { @apply text-[10.5px] font-extrabold not-italic text-ink-2; }
@@ -231,6 +247,24 @@
 @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } }
 
 @media print {
+  @page { margin: 12mm; }
   aside, header, .no-print { display: none !important; }
-  .panel { box-shadow: none; border: 1px solid #ddd; break-inside: avoid; }
+  html, body { background: #fff !important; }
+  main { padding: 0 !important; }
+  /* Pills, bars and avatars keep their colors on paper. */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* One column on a page; small panels stay whole, long tables continue on the next page. */
+  .grid-2 { grid-template-columns: 1fr !important; }
+  .panel { box-shadow: none !important; border: 1px solid #ddd; break-inside: auto; }
+  .kpi, .grid-2 > .panel:not(:has(table)) { break-inside: avoid; box-shadow: none !important; border: 1px solid #ddd; }
+  /* Nothing is cut at a scroll edge: the whole table prints, a little smaller. */
+  .table-wrap, .cols { overflow: visible !important; }
+  table.tbl { font-size: 10.5px; }
+  /* Cells wrap on paper so every column fits the page width. */
+  .tbl th, .tbl td { padding: 5px 6px; white-space: normal !important; }
+  .tbl td span:not(.pill):not(.pill-text) { white-space: normal !important; }
+  .tbl .q-cell { max-width: 200px; }
+  .tbl .q-cell b, .tbl .pill, .tbl .pill-text { white-space: normal !important; }
+  .tbl tr { break-inside: avoid; }
+  .tbl thead { display: table-header-group; }
 }

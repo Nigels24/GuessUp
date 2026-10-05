@@ -191,7 +191,7 @@ export interface DashboardSummary {
   mostMissed: MissedItem[];
   recentSessions: {
     id: string;
-    user: { id: string; fullName: string };
+    user: { id: string; fullName: string; avatarUrl: string | null };
     category: CategoryRef;
     difficulty: Difficulty;
     totalScore: number;

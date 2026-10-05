@@ -31,6 +31,7 @@ import {
   feedbackTitle,
   type Feedback,
 } from '../../../src/components/play/FeedbackSheet';
+import { PopIn, Pulse } from '../../../src/components/motion';
 import { PuzzleInput, emptySlots, puzzleValue } from '../../../src/components/play/PuzzleInput';
 import { QuestionImage } from '../../../src/components/play/QuestionImage';
 import {
@@ -459,9 +460,12 @@ export default function PlayScreen() {
                 style={[s.timerFill, { width: `${fraction * 100}%`, backgroundColor: barColor }]}
               />
             </View>
-            <Text style={[s.timerNum, danger && { color: colors.bad }]}>
-              {Math.ceil(remaining)}
-            </Text>
+            {/* The prototype's pulse in the last 10 seconds; visual only, the timer is unchanged. */}
+            <Pulse active={danger && phase === 'playing' && !gaveUp}>
+              <Text style={[s.timerNum, danger && { color: colors.bad }]}>
+                {Math.ceil(remaining)}
+              </Text>
+            </Pulse>
           </View>
 
           <View style={s.card}>
@@ -482,9 +486,9 @@ export default function PlayScreen() {
               <QuestionImage imageUrl={item.imageUrl} />
             ) : null}
             {round.hint ? (
-              <View style={s.hintBox}>
+              <PopIn style={s.hintBox}>
                 <Text style={s.hintText}>💡 {round.hint}</Text>
-              </View>
+              </PopIn>
             ) : null}
           </View>
 

@@ -107,7 +107,12 @@ export default function DashboardPage() {
                 </Link>
               </div>
               <div className="table-wrap">
-                <table className="tbl">
+                <table className="tbl tbl-fixed min-w-[420px]">
+                  <colgroup>
+                    <col />
+                    <col className="w-[34%]" />
+                    <col className="w-[112px]" />
+                  </colgroup>
                   <thead>
                     <tr>
                       <th>Question</th>
@@ -129,7 +134,9 @@ export default function DashboardPage() {
                         <tr key={m.question.id}>
                           <td className="q-cell">
                             <b title={m.question.questionText}>{m.question.questionText}</b>
-                            <span className="muted small">{m.question.topic}</span>
+                            <span className="muted small" title={m.question.topic ?? undefined}>
+                              {m.question.topic}
+                            </span>
                           </td>
                           <td>
                             <CatPill category={m.question.category} />
@@ -155,40 +162,36 @@ export default function DashboardPage() {
                 </Link>
               </div>
               <div className="table-wrap">
-                <table className="tbl">
+                <table className="tbl tbl-fixed">
                   <tbody>
                     {!d ? (
-                      <WideRow cols={5}>
+                      <WideRow cols={1}>
                         <span className="muted">Loading…</span>
                       </WideRow>
                     ) : !d.recentSessions.length ? (
-                      <WideRow cols={5}>
+                      <WideRow cols={1}>
                         <span className="muted">No sessions yet.</span>
                       </WideRow>
                     ) : (
                       d.recentSessions.map((s) => (
                         <tr key={s.id}>
                           <td>
-                            <div className="user-cell">
-                              <Avatar name={s.user.fullName} />
-                              <div>
-                                <b>{s.user.fullName}</b>
-                                <span className="sub">
-                                  {s.category.icon} {s.category.name}
+                            <div className="recent-row">
+                              <Avatar name={s.user.fullName} src={s.user.avatarUrl} />
+                              <div className="who">
+                                <b title={s.user.fullName}>{s.user.fullName}</b>
+                                <CatPill category={s.category} />
+                              </div>
+                              <div className="stats">
+                                <span className="whitespace-nowrap">
+                                  <b>{s.totalScore}</b> pts
                                 </span>
+                                <AccPill value={s.accuracy} />
+                                <LevelPill level={s.difficulty} />
+                                <span className="muted small whitespace-nowrap">{ago(s.endedAt)}</span>
                               </div>
                             </div>
                           </td>
-                          <td>
-                            <LevelPill level={s.difficulty} />
-                          </td>
-                          <td className="whitespace-nowrap">
-                            <b>{s.totalScore}</b> pts
-                          </td>
-                          <td>
-                            <AccPill value={s.accuracy} />
-                          </td>
-                          <td className="muted small whitespace-nowrap">{ago(s.endedAt)}</td>
                         </tr>
                       ))
                     )}

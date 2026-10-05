@@ -1,14 +1,18 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { PasswordInput, useFeedback } from "@/components/ui";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { Avatar, PasswordInput, useFeedback } from "@/components/ui";
 import { apiFetch, type User } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
+import { PHOTO_TYPES, photoProblem, squarePhoto } from "@/lib/photo";
 
 /** Same rule as the API (api/src/me/me.rules.ts). */
 const ADMIN_PASSWORD_MIN = 10;
 
-/** My account: the signed-in administrator's name and password (PATCH /api/me, POST /api/me/password). */
+/**
+ * My account: the signed-in administrator's photo, name and password
+ * (POST/DELETE /api/me/avatar, PATCH /api/me, POST /api/me/password).
+ */
 export default function AccountPage() {
   const { user } = useAuth();
   if (!user) return null;
@@ -17,7 +21,7 @@ export default function AccountPage() {
       <div className="page-head">
         <div>
           <h2>My account</h2>
-          <p>Your name and password for the Administrator Panel.</p>
+          <p>Your photo, name and password for the Administrator Panel.</p>
         </div>
       </div>
       <div className="grid max-w-[980px] gap-[18px] min-[1001px]:grid-cols-2">
@@ -60,6 +64,7 @@ function ProfileSection({ user }: { user: User }) {
         <h3>Profile</h3>
       </div>
       <div className="panel-body">
+        <PhotoField user={user} />
         <div className="field">
           <label htmlFor="acc-name">Full name</label>
           <input className="input" id="acc-name" value={fullName} maxLength={80} autoComplete="name" onChange={(e) => setFullName(e.target.value)} />
@@ -77,6 +82,107 @@ function ProfileSection({ user }: { user: User }) {
         </button>
       </div>
     </form>
+  );
+}
+
+/**
+ * The profile photo: Upload / Change / Remove. The picked image is checked and
+ * cropped to a 512×512 JPEG in the browser, shown at once as a preview, then
+ * uploaded; the header avatar follows through updateUser.
+ */
+function PhotoField({ user }: { user: User }) {
+  const { updateUser } = useAuth();
+  const { confirm, toast } = useFeedback();
+  const input = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  // The preview is a local object URL; release it when replaced.
+  useEffect(() => () => {
+    if (preview) URL.revokeObjectURL(preview);
+  }, [preview]);
+
+  async function pick(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // picking the same file again still fires
+    if (!file) return;
+    const problem = photoProblem(file);
+    if (problem) return setError(problem);
+    setError("");
+    setBusy(true);
+    try {
+      const photo = await squarePhoto(file);
+      setPreview(URL.createObjectURL(photo));
+      const form = new FormData();
+      form.append("file", photo, "avatar.jpg");
+      updateUser(await apiFetch<User>("/me/avatar", { method: "POST", body: form }));
+      toast("Photo updated");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not upload the photo.");
+    } finally {
+      setPreview(null);
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    const ok = await confirm({
+      title: "Remove your photo?",
+      message: "Your initials will be shown instead.",
+      okText: "Remove photo",
+      danger: true,
+    });
+    if (!ok) return;
+    setError("");
+    setBusy(true);
+    try {
+      await apiFetch<null>("/me/avatar", { method: "DELETE" });
+      updateUser({ ...user, avatarUrl: null });
+      toast("Photo removed");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not remove the photo.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const hasPhoto = Boolean(user.avatarUrl);
+  return (
+    <div className="field">
+      <label>Photo</label>
+      <div className="flex flex-wrap items-center gap-4">
+        <span className="relative">
+          <Avatar
+            name={user.fullName}
+            src={preview ?? user.avatarUrl}
+            className="!h-20 !w-20 !rounded-full !text-2xl"
+          />
+          {busy && (
+            <span className="absolute inset-0 grid place-items-center rounded-full bg-[rgba(20,14,60,.45)]" role="status" aria-label="Saving photo">
+              <span className="h-6 w-6 animate-spin rounded-full border-[3px] border-white/40 border-t-white" />
+            </span>
+          )}
+        </span>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="btn btn-ghost btn-sm" disabled={busy} onClick={() => input.current?.click()}>
+            {busy ? "Saving…" : hasPhoto ? "Change photo" : "Upload photo"}
+          </button>
+          {hasPhoto && (
+            <button type="button" className="btn btn-ghost btn-sm text-[#DC2626]" disabled={busy} onClick={() => void remove()}>
+              Remove photo
+            </button>
+          )}
+        </div>
+        <input ref={input} type="file" accept={PHOTO_TYPES.join(",")} className="hidden" onChange={(e) => void pick(e)} aria-label="Choose a photo" />
+      </div>
+      <span className="help">JPG, PNG or WebP, up to 15 MB. It is cropped to a square and resized before upload.</span>
+      {error && (
+        <div className="error-text mt-1.5" role="alert">
+          {error}
+        </div>
+      )}
+    </div>
   );
 }
 

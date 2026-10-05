@@ -47,6 +47,7 @@ describe('Profile photo (e2e)', () => {
   const fake = new FakeCloudinary();
   const accounts: TestAccount[] = [];
   let student: TestAccount;
+  let admin: TestAccount;
   let studentToken: string;
   let adminToken: string;
 
@@ -63,7 +64,7 @@ describe('Profile photo (e2e)', () => {
     prisma = app.get(PrismaService);
     student = await createTestAccount(prisma, 'STUDENT', 'avatar');
     accounts.push(student);
-    const admin = await createTestAccount(prisma, 'ADMIN', 'avatar-admin');
+    admin = await createTestAccount(prisma, 'ADMIN', 'avatar-admin');
     accounts.push(admin);
     studentToken = await login(student);
     adminToken = await login(admin);
@@ -108,9 +109,7 @@ describe('Profile photo (e2e)', () => {
     expect(res.body.message).toMatch(/CLOUDINARY_CLOUD_NAME/);
   });
 
-  it('is for students only: administrators get 403, no token 401', async () => {
-    await upload(adminToken, JPG).expect(403);
-    await request(http).delete('/api/me/avatar').set(auth(adminToken)).expect(403);
+  it('needs a token (401)', async () => {
     await request(http).post('/api/me/avatar').attach('file', JPG, 'me.jpg').expect(401);
     await request(http).delete('/api/me/avatar').expect(401);
   });
@@ -142,6 +141,42 @@ describe('Profile photo (e2e)', () => {
     expect(now).not.toBe(old);
     expect(res.body.avatarUrl).toContain(now);
     expect(fake.destroyed).toEqual([{ publicId: old, folder: 'avatars' }]);
+  });
+
+  it('administrators can set and remove their own photo, and never touch a student\'s', async () => {
+    const studentBefore = await prisma.user.findUniqueOrThrow({ where: { id: student.id } });
+    expect(studentBefore.avatarPublicId).not.toBeNull();
+
+    const res = await upload(adminToken, PNG, 'admin.png').expect(200);
+    expect(fake.uploads).toEqual([{ folder: 'avatars', options: { publicId: expect.stringMatching(new RegExp(`^user-${admin.id}-\\d+$`)) } }]);
+    expect(res.body).toMatchObject({ id: admin.id, role: 'ADMIN' });
+    expect(res.body.avatarUrl).toMatch(new RegExp(`/guessup/avatars/user-${admin.id}-`));
+    expect(allKeys(res.body)).not.toContain('avatarPublicId');
+    for (const path of ['/api/auth/me', '/api/me']) {
+      const me = await request(http).get(path).set(auth(adminToken)).expect(200);
+      expect(me.body.avatarUrl, path).toBe(res.body.avatarUrl);
+    }
+
+    // A second photo replaces the first; only the administrator's own file is deleted.
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const first = (await prisma.user.findUniqueOrThrow({ where: { id: admin.id } })).avatarPublicId;
+    await upload(adminToken, JPG).expect(200);
+    expect(fake.destroyed).toEqual([{ publicId: first, folder: 'avatars' }]);
+
+    const adminPhoto = (await prisma.user.findUniqueOrThrow({ where: { id: admin.id } })).avatarPublicId;
+    await request(http).delete('/api/me/avatar').set(auth(adminToken)).expect(204);
+    await request(http).delete('/api/me/avatar').set(auth(adminToken)).expect(204);
+    expect(fake.destroyed).toEqual([
+      { publicId: first, folder: 'avatars' },
+      { publicId: adminPhoto, folder: 'avatars' },
+    ]);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: admin.id } })).avatarUrl).toBeNull();
+
+    // The student's photo was never involved: there is no route that takes another user's id.
+    const studentAfter = await prisma.user.findUniqueOrThrow({ where: { id: student.id } });
+    expect(studentAfter).toMatchObject({ avatarUrl: studentBefore.avatarUrl, avatarPublicId: studentBefore.avatarPublicId });
+    expect(fake.destroyed.map((d) => d.publicId)).not.toContain(studentBefore.avatarPublicId);
+    await request(http).delete(`/api/me/avatar/${student.id}`).set(auth(adminToken)).expect(404);
   });
 
   it('shows the photo on the leaderboard and to administrators, never the public id', async () => {
