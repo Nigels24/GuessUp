@@ -5,6 +5,7 @@ import { PrismaService } from '../prisma/prisma.service.js';
 import { pageOf, type Page } from './dto/query.dto.js';
 import type { SessionListQueryDto } from './dto/session.dto.js';
 import { reportRange } from './reports.logic.js';
+import { displayStatus, statusFilterWhere } from './session-status.js';
 
 export const SESSIONS_PAGE_SIZE = 20;
 
@@ -12,19 +13,34 @@ const SESSION_INCLUDE = {
   user: { select: { id: true, fullName: true, email: true, yearLevel: true, avatarUrl: true } },
   category: { select: CATEGORY_REF },
   _count: { select: { answers: true } },
+  // The latest answer, to tell a stale unfinished round (see session-status.ts).
+  answers: { select: { createdAt: true }, orderBy: { createdAt: 'desc' }, take: 1 },
 } as const;
 
 type SessionRow = Prisma.GameSessionGetPayload<{ include: typeof SESSION_INCLUDE }>;
 
-function toRow(s: SessionRow) {
+/**
+ * `status` is what the panel shows: an unfinished round with no activity for
+ * over 2 hours is ABANDONED (ended at its last activity). Nothing is written.
+ */
+function toRow(s: SessionRow, now: Date) {
+  const shown = displayStatus(
+    {
+      status: s.status,
+      startedAt: s.startedAt,
+      currentServedAt: s.currentServedAt,
+      answeredAt: s.answers.map((a) => a.createdAt),
+    },
+    now,
+  );
   return {
     id: s.id,
     user: s.user,
     category: s.category,
     difficulty: s.difficulty,
-    status: s.status,
+    status: shown.status,
     startedAt: s.startedAt,
-    endedAt: s.endedAt,
+    endedAt: s.endedAt ?? shown.staleSince,
     totalScore: s.totalScore,
     correctCount: s.correctCount,
     totalItems: s.totalItems,
@@ -63,7 +79,7 @@ export class AdminSessionsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Newest first. Dates filter on when the round started (Philippine calendar days). */
-  async list(query: SessionListQueryDto): Promise<Page<AdminSessionRow>> {
+  async list(query: SessionListQueryDto, now = new Date()): Promise<Page<AdminSessionRow>> {
     const search = query.search?.trim();
     let startedAt: Prisma.DateTimeFilter | undefined;
     if (query.from || query.to) {
@@ -78,7 +94,6 @@ export class AdminSessionsService {
       userId: query.studentId || undefined,
       categoryId: query.categoryId || undefined,
       difficulty: query.difficulty,
-      status: query.status,
       startedAt,
       user: search
         ? {
@@ -89,6 +104,8 @@ export class AdminSessionsService {
           }
         : undefined,
     };
+    const statusWhere = statusFilterWhere(query.status, now);
+    if (statusWhere) where.AND = [statusWhere];
     const { page, pageSize, skip, take } = pageOf(query, SESSIONS_PAGE_SIZE);
     const [total, rows] = await Promise.all([
       this.prisma.gameSession.count({ where }),
@@ -100,11 +117,11 @@ export class AdminSessionsService {
         take,
       }),
     ]);
-    return { items: rows.map(toRow), total, page, pageSize };
+    return { items: rows.map((row) => toRow(row, now)), total, page, pageSize };
   }
 
   /** One session with every submitted answer (the prototype's "Session answers"). */
-  async get(id: string): Promise<AdminSessionDetail> {
+  async get(id: string, now = new Date()): Promise<AdminSessionDetail> {
     const session = await this.prisma.gameSession.findUnique({
       where: { id },
       include: {
@@ -121,7 +138,7 @@ export class AdminSessionsService {
     });
     if (!session) throw new NotFoundException('Game session not found.');
     return {
-      ...toRow(session),
+      ...toRow(session, now),
       answers: session.answers.map((a, i) => ({
         index: i + 1,
         question: a.question,

@@ -6,6 +6,7 @@ import { DIFFICULTY_KEYS } from './question.dto.js';
 import { DateRangeQueryDto } from './query.dto.js';
 
 export const SESSION_STATUSES = ['IN_PROGRESS', 'COMPLETED', 'ABANDONED'] as const;
+export type SessionStatusKey = (typeof SESSION_STATUSES)[number];
 
 /** GET /api/admin/sessions */
 export class SessionListQueryDto extends DateRangeQueryDto {
@@ -32,5 +33,5 @@ export class SessionListQueryDto extends DateRangeQueryDto {
 
   @IsOptional()
   @IsIn(SESSION_STATUSES)
-  status?: (typeof SESSION_STATUSES)[number];
+  status?: SessionStatusKey;
 }

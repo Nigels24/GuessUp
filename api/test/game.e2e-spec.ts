@@ -30,6 +30,13 @@ function expectSafeItem(item: unknown): void {
 const WRONG = 'definitely not the answer';
 /** Seconds the tests pretend the student took on an item (rewinds the server timestamp). */
 const THINK_SECONDS = 10;
+/**
+ * Round-trip slack for clock-based values. The server measures time itself, so
+ * a slow trip to the database (Neon from the Philippines) can add a few seconds
+ * between the test setting the clock and the server reading it. Within this
+ * margin the timer is still clearly the server's.
+ */
+const LATENCY_SECONDS = 5;
 
 describe('Gameplay (e2e)', () => {
   let app: NestExpressApplication;
@@ -142,6 +149,7 @@ describe('Gameplay (e2e)', () => {
       { correct: false, hint: false },
     ];
     let expectedTotal = 0;
+    const earned: number[] = [];
 
     for (const [i, step] of plan.entries()) {
       const index = i + 1;
@@ -179,8 +187,9 @@ describe('Gameplay (e2e)', () => {
         expect(current.body.item.index).toBe(index);
         expect(current.body.item.questionText).toBe(question.questionText);
         expect(current.body.results).toHaveLength(index - 1);
-        // Full time, give or take a second of network latency.
-        expect(current.body.secondsRemaining).toBeGreaterThanOrEqual(level.seconds - 1);
+        // Full time, less the round-trip.
+        expect(current.body.secondsRemaining).toBeLessThanOrEqual(level.seconds);
+        expect(current.body.secondsRemaining).toBeGreaterThanOrEqual(level.seconds - LATENCY_SECONDS);
         const served = await prisma.gameSession.findUniqueOrThrow({ where: { id: sessionId } });
         expect(served.currentServedAt).not.toBeNull();
 
@@ -195,7 +204,7 @@ describe('Gameplay (e2e)', () => {
           expect(again.body.item.index).toBe(2);
           expect(again.body.item.questionText).toBe(question.questionText);
           expect(again.body.secondsRemaining).toBeLessThanOrEqual(level.seconds - 7);
-          expect(again.body.secondsRemaining).toBeGreaterThanOrEqual(level.seconds - 8);
+          expect(again.body.secondsRemaining).toBeGreaterThanOrEqual(level.seconds - 7 - LATENCY_SECONDS);
         }
       }
 
@@ -215,15 +224,22 @@ describe('Gameplay (e2e)', () => {
         .send({ index, submitted: step.correct ? question.answer : WRONG })
         .expect(200);
 
-      const expectedPoints = scoreAnswer('EASY', step.correct, level.seconds - THINK_SECONDS, step.hint);
-      expectedTotal += expectedPoints;
+      // scoreAnswer for an answer THINK_SECONDS after the item was sent, plus up to LATENCY_SECONDS.
+      const points: number = res.body.pointsEarned;
+      expect(points).toBeLessThanOrEqual(scoreAnswer('EASY', step.correct, level.seconds - THINK_SECONDS, step.hint));
+      expect(points).toBeGreaterThanOrEqual(
+        scoreAnswer('EASY', step.correct, level.seconds - THINK_SECONDS - LATENCY_SECONDS, step.hint),
+      );
+      if (!step.correct) expect(points).toBe(0);
+      earned.push(points);
+      expectedTotal += points;
       expect(res.body).toEqual({
         index,
         isCorrect: step.correct,
         timedOut: false,
         correctAnswer: question.answer,
         explanation: question.explanation,
-        pointsEarned: expectedPoints,
+        pointsEarned: points,
         totalScore: expectedTotal,
         correctCount: plan.slice(0, index).filter((p) => p.correct).length,
         answeredCount: index,
@@ -236,11 +252,13 @@ describe('Gameplay (e2e)', () => {
       expect(after.currentServedAt).toBeNull();
     }
 
-    // Stored answers match scoreAnswer's output.
+    // Stored answers are the ones the server reported, timed by the server.
     const stored = await prisma.answer.findMany({ where: { sessionId }, orderBy: { createdAt: 'asc' } });
-    expect(stored.map((a) => a.pointsEarned)).toEqual(
-      plan.map((p) => scoreAnswer('EASY', p.correct, level.seconds - THINK_SECONDS, p.hint)),
-    );
+    expect(stored.map((a) => a.pointsEarned)).toEqual(earned);
+    for (const a of stored) {
+      expect(a.timeTaken).toBeGreaterThanOrEqual(THINK_SECONDS);
+      expect(a.timeTaken).toBeLessThanOrEqual(THINK_SECONDS + LATENCY_SECONDS);
+    }
     expect(stored.map((a) => a.hintUsed)).toEqual(plan.map((p) => p.hint));
 
     // Nothing left to send once every item is answered.
@@ -266,7 +284,7 @@ describe('Gameplay (e2e)', () => {
       totalItems: ROUND_SIZE,
       accuracy: 60,
       hintsUsed: 1,
-      timeSpent: ROUND_SIZE * THINK_SECONDS,
+      timeSpent: stored.reduce((sum, a) => sum + a.timeTaken, 0),
     });
     expect(finish.body.newBadges.map((b: { code: string }) => b.code)).toContain('first_round');
     roundA = { total: expectedTotal, correct: 3 };

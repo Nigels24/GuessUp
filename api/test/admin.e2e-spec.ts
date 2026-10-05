@@ -465,6 +465,57 @@ describe('Admin Panel API (e2e)', () => {
       expect(abandoned.body.total).toBeGreaterThanOrEqual(1);
     });
 
+    it('shows a round left unfinished for over 2 hours as Abandoned, without changing it', async () => {
+      const hour = 3_600_000;
+      const now = Date.now();
+      const question = await prisma.question.findFirstOrThrow({ where: { seedKey: { not: null } } });
+      const base = { userId: studentId, categoryId, difficulty: 'EASY' as const, totalItems: 5, itemIds: [question.id] };
+      const stale = await prisma.gameSession.create({
+        data: { ...base, startedAt: new Date(now - 3 * hour), currentServedAt: new Date(now - 3 * hour) },
+      });
+      const fresh = await prisma.gameSession.create({
+        data: { ...base, startedAt: new Date(now - 1.5 * hour), currentServedAt: new Date(now - 1.5 * hour) },
+      });
+      // Started long ago, but answered 30 minutes ago: still being played.
+      const recent = await prisma.gameSession.create({
+        data: {
+          ...base,
+          startedAt: new Date(now - 5 * hour),
+          currentIndex: 1,
+          answers: {
+            create: { questionId: question.id, submitted: 'x', isCorrect: false, timeTaken: 10, pointsEarned: 0, createdAt: new Date(now - 0.5 * hour) },
+          },
+        },
+      });
+      try {
+        const list = await request(http).get('/api/admin/sessions').query({ studentId }).set(auth(adminToken)).expect(200);
+        const status = (id: string) => list.body.items.find((r: { id: string }) => r.id === id);
+        expect(status(stale.id)).toMatchObject({ status: 'ABANDONED', endedAt: new Date(now - 3 * hour).toISOString() });
+        expect(status(fresh.id)).toMatchObject({ status: 'IN_PROGRESS', endedAt: null });
+        expect(status(recent.id)).toMatchObject({ status: 'IN_PROGRESS', endedAt: null });
+
+        const ids = async (filter: string) =>
+          (
+            await request(http).get('/api/admin/sessions').query({ studentId, status: filter }).set(auth(adminToken)).expect(200)
+          ).body.items.map((r: { id: string }) => r.id);
+        const inProgress = await ids('IN_PROGRESS');
+        expect(inProgress).toEqual(expect.arrayContaining([fresh.id, recent.id]));
+        expect(inProgress).not.toContain(stale.id);
+        const abandoned = await ids('ABANDONED');
+        expect(abandoned).toContain(stale.id);
+        expect(abandoned).not.toContain(fresh.id);
+        expect(abandoned).not.toContain(recent.id);
+
+        const detail = await request(http).get(`/api/admin/sessions/${stale.id}`).set(auth(adminToken)).expect(200);
+        expect(detail.body.status).toBe('ABANDONED');
+        // Only the panel's view changed: the stored round is untouched.
+        const stored = await prisma.gameSession.findUniqueOrThrow({ where: { id: stale.id } });
+        expect(stored).toMatchObject({ status: 'IN_PROGRESS', endedAt: null });
+      } finally {
+        await prisma.gameSession.deleteMany({ where: { id: { in: [stale.id, fresh.id, recent.id] } } });
+      }
+    });
+
     it('validates the date filter', async () => {
       await request(http).get('/api/admin/sessions').query({ from: '04/10/2026' }).set(auth(adminToken)).expect(400);
       await request(http)

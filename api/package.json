@@ -25,6 +25,8 @@
     "prisma:seed": "prisma db seed",
     "prisma:reset": "prisma migrate reset",
     "admin:set-password": "tsx scripts/set-admin-password.ts",
+    "demo:seed": "tsx scripts/demo-seed.ts",
+    "demo:remove": "tsx scripts/demo-seed.ts --remove",
     "postinstall": "prisma generate"
   },
   "dependencies": {
