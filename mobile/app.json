@@ -30,6 +30,21 @@
       "expo-router",
       "expo-secure-store",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "GuessUp uses your photos only when you choose a profile picture.",
+          "cameraPermission": "GuessUp uses the camera only when you take a profile picture.",
+          "microphonePermission": false,
+          "colors": {
+            "cropToolbarColor": "#6C4CF1",
+            "cropToolbarIconColor": "#FFFFFF",
+            "cropToolbarActionTextColor": "#FFFFFF",
+            "cropBackButtonIconColor": "#FFFFFF",
+            "cropBackgroundColor": "#1E1847"
+          }
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#2E1A8C",

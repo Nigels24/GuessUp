@@ -20,7 +20,7 @@ import type { RegisterDto } from './dto/register.dto.js';
  */
 const TIMING_GUARD_HASH = bcrypt.hashSync('guessup-timing-guard', BCRYPT_ROUNDS);
 
-/** Strips the password hash and timestamps: the only user shape the API returns. */
+/** Strips the password hash, the photo's Cloudinary id and timestamps: the only user shape the API returns. */
 export function toPublicUser(user: User): PublicUser {
   return {
     id: user.id,
@@ -29,6 +29,7 @@ export function toPublicUser(user: User): PublicUser {
     role: user.role,
     yearLevel: user.yearLevel,
     status: user.status,
+    avatarUrl: user.avatarUrl,
   };
 }
 

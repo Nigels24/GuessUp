@@ -2,18 +2,27 @@ import type { Type } from '@nestjs/common';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
 import type { NestExpressApplication } from '@nestjs/platform-express';
-import { Test, type TestingModule } from '@nestjs/testing';
+import { Test, type TestingModule, type TestingModuleBuilder } from '@nestjs/testing';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/app.setup.js';
 import { BCRYPT_ROUNDS } from './../src/auth/auth.constants.js';
 import { PrismaService } from './../src/prisma/prisma.service.js';
 
-/** The real app, configured like main.ts, plus any test-only controllers. */
-export async function createApp(controllers: Type[] = []): Promise<NestExpressApplication> {
-  const moduleFixture: TestingModule = await Test.createTestingModule({
-    imports: [AppModule],
-    controllers,
-  }).compile();
+/**
+ * The real app, configured like main.ts, plus any test-only controllers.
+ * `override` can swap providers, e.g. a fake CloudinaryService so a test
+ * never uploads real files.
+ */
+export async function createApp(
+  controllers: Type[] = [],
+  override: (builder: TestingModuleBuilder) => TestingModuleBuilder = (builder) => builder,
+): Promise<NestExpressApplication> {
+  const moduleFixture: TestingModule = await override(
+    Test.createTestingModule({
+      imports: [AppModule],
+      controllers,
+    }),
+  ).compile();
 
   const app = moduleFixture.createNestApplication<NestExpressApplication>();
   configureApp(app);

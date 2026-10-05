@@ -17,6 +17,8 @@ export interface StudentRow {
   email: string;
   yearLevel: string | null;
   status: UserStatusKey;
+  /** Profile photo; null shows the initials. */
+  avatarUrl: string | null;
   createdAt: Date;
   /** Completed rounds; points and accuracy count completed rounds only. */
   rounds: number;
@@ -41,6 +43,7 @@ const STUDENT_FIELDS = {
   email: true,
   yearLevel: true,
   status: true,
+  avatarUrl: true,
   createdAt: true,
 } as const;
 

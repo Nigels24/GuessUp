@@ -10,6 +10,8 @@ export interface RankingRow {
   rank: number;
   userId: string;
   fullName: string;
+  /** Profile photo; null shows the initials. */
+  avatarUrl: string | null;
   totalPoints: number;
   roundsPlayed: number;
   /** Correct items / items played across the student's completed rounds here. */
@@ -42,7 +44,7 @@ export class LeaderboardService {
         select: {
           totalPoints: true,
           roundsPlayed: true,
-          user: { select: { id: true, fullName: true } },
+          user: { select: { id: true, fullName: true, avatarUrl: true } },
         },
       }),
       this.prisma.gameSession.groupBy({
@@ -59,6 +61,7 @@ export class LeaderboardService {
         return {
           userId: entry.user.id,
           fullName: entry.user.fullName,
+          avatarUrl: entry.user.avatarUrl,
           totalPoints: entry.totalPoints,
           roundsPlayed: entry.roundsPlayed,
           accuracy: accuracyPercent(sums?.correctCount ?? 0, sums?.totalItems ?? 0),

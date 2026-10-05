@@ -6,7 +6,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary, type UploadApiResponse } from 'cloudinary';
-import { CLOUDINARY_FOLDERS, type CloudinaryFolder } from '../common/cloudinary-folders.js';
+import {
+  CLOUDINARY_FOLDERS,
+  CLOUDINARY_INCOMING,
+  isInFolder,
+  type CloudinaryFolder,
+} from '../common/cloudinary-folders.js';
 
 export const CLOUDINARY_MESSAGES = {
   notConfigured:
@@ -20,8 +25,15 @@ export interface UploadedImage {
   publicId: string;
 }
 
+export interface UploadOptions {
+  /** The file name inside the folder (Cloudinary makes one up when omitted). */
+  publicId?: string;
+  /** SVG: stored as is, without the folder's resize. */
+  vector?: boolean;
+}
+
 /**
- * Question images on Cloudinary. Without the three CLOUDINARY_* variables the
+ * Question images and profile photos on Cloudinary. Without the three CLOUDINARY_* variables the
  * API still starts; uploads then answer 503 with a clear message.
  */
 @Injectable()
@@ -41,18 +53,35 @@ export class CloudinaryService {
     if (!this.configured) throw new ServiceUnavailableException(CLOUDINARY_MESSAGES.notConfigured);
   }
 
-  /** Uploads into one of the GuessUp folders (never the account's root, which another system shares). */
-  async upload(buffer: Buffer, folder: CloudinaryFolder): Promise<UploadedImage> {
+  /**
+   * Uploads into one of the GuessUp folders (never the account's root, which
+   * another system shares), resized by the folder's CLOUDINARY_INCOMING. The
+   * returned URL of a raster image asks for f_auto, so each device gets the
+   * smallest format it can show.
+   */
+  async upload(buffer: Buffer, folder: CloudinaryFolder, options: UploadOptions = {}): Promise<UploadedImage> {
     this.assertConfigured();
     try {
       const result = await new Promise<UploadApiResponse>((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
-          { folder: CLOUDINARY_FOLDERS[folder], resource_type: 'image', overwrite: false },
+          {
+            folder: CLOUDINARY_FOLDERS[folder],
+            public_id: options.publicId,
+            resource_type: 'image',
+            overwrite: false,
+            transformation: options.vector ? undefined : [CLOUDINARY_INCOMING[folder]],
+          },
           (error, res) => (error || !res ? reject(error ?? new Error('No response')) : resolve(res)),
         );
         stream.end(buffer);
       });
-      return { url: result.secure_url, publicId: result.public_id };
+      if (options.vector) return { url: result.secure_url, publicId: result.public_id };
+      const url = cloudinary.url(result.public_id, {
+        secure: true,
+        version: result.version,
+        transformation: [{ fetch_format: 'auto' }],
+      });
+      return { url, publicId: result.public_id };
     } catch (error) {
       this.logger.error(`Cloudinary upload failed: ${describe(error)}`);
       // 400 from Cloudinary: it could not read the file (the type check only looks at its first bytes).
@@ -63,10 +92,15 @@ export class CloudinaryService {
 
   /**
    * Removes an image that is no longer used. Best effort: a failure is logged,
-   * never thrown, because the question change it follows is already saved.
+   * never thrown, because the change it follows is already saved. Only ids
+   * inside the given GuessUp folder are deleted; anything else is refused.
    */
-  async destroy(publicId: string | null | undefined): Promise<void> {
+  async destroy(publicId: string | null | undefined, folder: CloudinaryFolder): Promise<void> {
     if (!publicId || !this.configured) return;
+    if (!isInFolder(publicId, folder)) {
+      this.logger.warn(`Refused to delete ${publicId}: not inside ${CLOUDINARY_FOLDERS[folder]}/`);
+      return;
+    }
     try {
       await cloudinary.uploader.destroy(publicId, { resource_type: 'image', invalidate: true });
     } catch (error) {

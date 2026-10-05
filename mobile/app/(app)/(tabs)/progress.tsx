@@ -8,8 +8,8 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { bottomNavSpace } from '../../../src/components/BottomNav';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useBottomNavSpace } from '../../../src/components/BottomNav';
 import { CategoryLine, HistoryRow } from '../../../src/components/rows';
 import {
   Button,
@@ -27,7 +27,7 @@ import { fetchProgress, type MeProgress } from '../../../src/lib/game';
 import { colors } from '../../../src/theme';
 
 export default function ProgressScreen() {
-  const insets = useSafeAreaInsets();
+  const navSpace = useBottomNavSpace();
   const [data, setData] = useState<MeProgress | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -74,7 +74,7 @@ export default function ProgressScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView
-        contentContainerStyle={[s.screen, { paddingBottom: bottomNavSpace(insets.bottom) }]}
+        contentContainerStyle={[s.screen, { paddingBottom: navSpace }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

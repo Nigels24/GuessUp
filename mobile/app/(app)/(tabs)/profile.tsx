@@ -1,8 +1,10 @@
 /**
- * Profile (the prototype's #/s/profile): the student's initials, name, email
- * and year level; the 8 badges (earned in color, locked dimmed; tap for
+ * Profile (the prototype's #/s/profile): the student's photo (or initials),
+ * name, email and year level; the 8 badges (earned in color, locked dimmed; tap for
  * details); and Account: Edit profile, Change password, About GuessUp and
  * Log out. The badge list comes from GET /me/summary, reloaded on focus.
+ * Tapping the photo takes, chooses or removes it (an addition to the
+ * prototype).
  */
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useRef, useState } from 'react';
@@ -15,8 +17,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { bottomNavSpace } from '../../../src/components/BottomNav';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useBottomNavSpace } from '../../../src/components/BottomNav';
 import { Dialog } from '../../../src/components/Dialog';
 import {
   Avatar,
@@ -33,16 +35,19 @@ import { apiErrorMessage } from '../../../src/lib/api';
 import {
   YEAR_LEVELS,
   changePassword,
+  removeAvatar,
   updateProfile,
+  uploadAvatar,
   type User,
   type YearLevel,
 } from '../../../src/lib/auth';
 import { useAuth } from '../../../src/lib/auth-context';
 import { date } from '../../../src/lib/format';
 import { fetchSummary, type BadgeInfo, type MeSummary } from '../../../src/lib/game';
+import { PermissionDeniedError, pickAvatar, type PhotoSource } from '../../../src/lib/photo';
 import { colors } from '../../../src/theme';
 
-type Open = 'edit' | 'password' | 'about' | { badge: BadgeInfo } | null;
+type Open = 'edit' | 'password' | 'about' | 'photo' | { badge: BadgeInfo } | null;
 
 /** The school and program named in the prototype's About dialog. */
 const ABOUT =
@@ -51,10 +56,12 @@ const ABOUT =
   'J.H. Cerilles State College – Dumingag Campus.';
 
 export default function ProfileScreen() {
-  const { user, logout } = useAuth();
-  const insets = useSafeAreaInsets();
+  const { user, logout, updateUser } = useAuth();
+  const navSpace = useBottomNavSpace();
   const [leaving, setLeaving] = useState(false);
   const [open, setOpen] = useState<Open>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState('');
 
   const [summary, setSummary] = useState<MeSummary | null>(null);
   const [error, setError] = useState('');
@@ -96,16 +103,60 @@ export default function ProfileScreen() {
     ]);
   }
 
+  async function changePhoto(source: PhotoSource | 'remove') {
+    setOpen(null);
+    if (!user) return;
+    setPhotoError('');
+    try {
+      if (source === 'remove') {
+        setPhotoBusy(true);
+        await removeAvatar();
+        await updateUser({ ...user, avatarUrl: null });
+        showToast('Photo removed');
+      } else {
+        const uri = await pickAvatar(source);
+        if (!uri) return;
+        setPhotoBusy(true);
+        await updateUser(await uploadAvatar(uri));
+        showToast('Photo updated');
+      }
+    } catch (e) {
+      if (e instanceof PermissionDeniedError) Alert.alert('Permission needed', e.message);
+      else setPhotoError(apiErrorMessage(e));
+    } finally {
+      setPhotoBusy(false);
+    }
+  }
+
+  const hasPhoto = Boolean(user?.avatarUrl);
   const earned = new Map(summary?.badges.map((b) => [b.code, b.earnedAt]) ?? []);
   const close = () => setOpen(null);
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView
-        contentContainerStyle={[s.screen, { paddingBottom: bottomNavSpace(insets.bottom) }]}
+        contentContainerStyle={[s.screen, { paddingBottom: navSpace }]}
       >
         <View style={s.head}>
-          <Avatar name={user?.fullName} size={84} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={hasPhoto ? 'Change or remove your photo' : 'Add a photo'}
+            accessibilityState={{ busy: photoBusy, disabled: photoBusy }}
+            disabled={photoBusy}
+            onPress={() => setOpen('photo')}
+            style={({ pressed }) => pressed && s.pressed}
+          >
+            <Avatar name={user?.fullName} uri={user?.avatarUrl} size={84} />
+            {photoBusy ? (
+              <View style={s.photoBusy}>
+                <ActivityIndicator color={colors.white} />
+              </View>
+            ) : null}
+            <View style={s.cameraBadge}>
+              <Text style={s.cameraIcon}>📷</Text>
+            </View>
+          </Pressable>
+          {photoError ? <ErrorText>{photoError}</ErrorText> : null}
           <Text style={s.name}>{user?.fullName}</Text>
           <Text style={s.email}>{user?.email}</Text>
           <View style={s.pills}>
@@ -163,6 +214,20 @@ export default function ProfileScreen() {
       ) : null}
       {open === 'edit' && user ? <EditProfileDialog user={user} onClose={close} /> : null}
       {open === 'password' ? <PasswordDialog onClose={close} /> : null}
+      <Dialog
+        visible={open === 'photo'}
+        title="Profile photo"
+        onClose={close}
+        footer={<Button title="Cancel" variant="ghost" style={s.flex} onPress={close} />}
+      >
+        <View style={s.photoMenu}>
+          <MenuItem first label="📷 Take photo" onPress={() => void changePhoto('camera')} />
+          <MenuItem label="🖼️ Choose from gallery" onPress={() => void changePhoto('gallery')} />
+          {hasPhoto ? (
+            <MenuItem label="🗑️ Remove photo" danger onPress={() => void changePhoto('remove')} />
+          ) : null}
+        </View>
+      </Dialog>
       <Dialog
         visible={open === 'about'}
         title="About GuessUp"
@@ -385,6 +450,33 @@ const s = StyleSheet.create({
   },
   badgeGap: { marginRight: '3.5%' },
   pressed: { transform: [{ scale: 0.97 }] },
+  photoBusy: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 84 / 3.1,
+    backgroundColor: colors.overlay,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cameraBadge: {
+    position: 'absolute',
+    right: -6,
+    bottom: -6,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.brandSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...cardShadow,
+  },
+  cameraIcon: { fontSize: 15 },
+  photoMenu: { borderRadius: 16, borderWidth: 1, borderColor: colors.line, overflow: 'hidden' },
   badgeIcon: { fontSize: 32 },
   // React Native cannot grayscale an emoji; dimming stands in for the prototype's filter.
   locked: { opacity: 0.3 },

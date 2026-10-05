@@ -77,6 +77,8 @@ export interface StudentRow {
   email: string;
   yearLevel: string | null;
   status: "ACTIVE" | "INACTIVE";
+  /** Profile photo; null shows the initials. */
+  avatarUrl: string | null;
   createdAt: string;
   rounds: number;
   totalPoints: number;
@@ -92,7 +94,7 @@ export interface StudentDetail extends StudentRow {
 
 export interface SessionRow {
   id: string;
-  user: { id: string; fullName: string; email: string; yearLevel: string | null };
+  user: { id: string; fullName: string; email: string; yearLevel: string | null; avatarUrl: string | null };
   category: CategoryRef;
   difficulty: Difficulty;
   status: SessionStatus;

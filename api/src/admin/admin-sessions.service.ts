@@ -9,7 +9,7 @@ import { reportRange } from './reports.logic.js';
 export const SESSIONS_PAGE_SIZE = 20;
 
 const SESSION_INCLUDE = {
-  user: { select: { id: true, fullName: true, email: true, yearLevel: true } },
+  user: { select: { id: true, fullName: true, email: true, yearLevel: true, avatarUrl: true } },
   category: { select: CATEGORY_REF },
   _count: { select: { answers: true } },
 } as const;

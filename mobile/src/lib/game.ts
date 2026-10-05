@@ -128,6 +128,8 @@ export interface RankingRow {
   rank: number;
   userId: string;
   fullName: string;
+  /** Profile photo; null shows the initials. */
+  avatarUrl: string | null;
   totalPoints: number;
   roundsPlayed: number;
   /** 0–100 */

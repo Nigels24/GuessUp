@@ -3,7 +3,7 @@ import { Prisma, type Question } from '@prisma/client';
 import { CATEGORY_REF } from '../game/game.service.js';
 import type { CategoryRef } from '../game/game.types.js';
 import { PrismaService } from '../prisma/prisma.service.js';
-import { CloudinaryService } from './cloudinary.service.js';
+import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 import type {
   CreateQuestionDto,
   QuestionListQueryDto,
@@ -230,7 +230,7 @@ export class AdminQuestionsService {
   }
 
   private async removeImageIfUnused(publicId: string | null): Promise<void> {
-    if (publicId && !(await this.imageInUse(publicId))) await this.cloudinary.destroy(publicId);
+    if (publicId && !(await this.imageInUse(publicId))) await this.cloudinary.destroy(publicId, 'questions');
   }
 }
 

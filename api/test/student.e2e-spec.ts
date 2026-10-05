@@ -15,7 +15,7 @@ import { allKeys, createApp, createTestAccount, deleteTestAccounts, type TestAcc
 
 const PASSWORD = 'longenough';
 /** Must never appear in a leaderboard response. */
-const PRIVATE_KEYS = ['email', 'passwordHash', 'role', 'status'];
+const PRIVATE_KEYS = ['email', 'passwordHash', 'role', 'status', 'avatarPublicId'];
 
 describe('Student side: leaderboard, progress, profile (e2e)', () => {
   let app: NestExpressApplication;
@@ -127,6 +127,7 @@ describe('Student side: leaderboard, progress, profile (e2e)', () => {
         rank: expect.any(Number),
         userId: idA,
         fullName: 'e2e-side-player',
+        avatarUrl: null,
         totalPoints: roundA.total,
         roundsPlayed: 1,
         accuracy: Math.round((1 / ROUND_SIZE) * 100),
@@ -230,6 +231,7 @@ describe('Student side: leaderboard, progress, profile (e2e)', () => {
         role: 'STUDENT',
         yearLevel: '4th Year',
         status: 'ACTIVE',
+        avatarUrl: null,
       });
       const me = await request(http).get('/api/auth/me').set(auth(tokenA)).expect(200);
       expect(me.body).toMatchObject({ fullName: 'e2e-edited-player', yearLevel: '4th Year' });

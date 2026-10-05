@@ -36,10 +36,38 @@ export function StatusPill({ status }: { status: SessionStatus }) {
 
 /* ---------- small building blocks ---------- */
 
-export function Avatar({ name, inactive = false }: { name: string; inactive?: boolean }) {
+/** A student's photo, or their initials when there is none or it cannot load. */
+export function Avatar({
+  name,
+  src,
+  inactive = false,
+  large = false,
+}: {
+  name: string;
+  /** avatarUrl from the API (students' profile photos). */
+  src?: string | null;
+  inactive?: boolean;
+  large?: boolean;
+}) {
+  const [failed, setFailed] = useState<string | null>(null);
+  const photo = src && failed !== src ? src : null;
   return (
-    <span className="avatar" style={inactive ? { background: "#94A3B8" } : undefined}>
-      {initials(name)}
+    <span
+      className={`avatar${large ? " avatar-lg" : ""}`}
+      style={inactive && !photo ? { background: "#94A3B8" } : undefined}
+    >
+      {photo ? (
+        // Cloudinary already serves it resized; next/image would add nothing here.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={photo}
+          alt=""
+          className={inactive ? "grayscale" : undefined}
+          onError={() => setFailed(photo)}
+        />
+      ) : (
+        initials(name)
+      )}
     </span>
   );
 }

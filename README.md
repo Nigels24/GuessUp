@@ -11,7 +11,7 @@ Final defense: **October 15, 2026**
 | `admin/` | Administrator web panel | Next.js 14 (App Router), TypeScript, Tailwind |
 | `mobile/`| Student Android app     | Expo SDK 57, React Native, TypeScript         |
 
-Hosting: **Neon** (PostgreSQL) · **Render** (API) · **Vercel** (admin panel) · **Cloudinary** (question images).
+Hosting: **Neon** (PostgreSQL) · **Render** (API) · **Vercel** (admin panel) · **Cloudinary** (question images, profile photos).
 
 The approved prototype of every screen and game rule is in
 `docs/prototype/GuessUp-Prototype.html` — open it in a browser. It is the reference for
@@ -165,6 +165,47 @@ still be changed on the app's API address screen.
   added in the panel are left alone
 - A question deactivated while a student is in the middle of a round stays in that round; it is
   left out of every round started afterwards
+
+## Step 6: student profile photo
+
+An addition to the prototype: students can add a profile photo. The initials avatar stays
+everywhere as the fallback.
+
+- `POST /api/me/avatar` (students only, multipart field `file`): JPG, PNG or WebP up to 2 MB,
+  recognized by content (SVG is refused). Returns the updated user. Stored on Cloudinary as
+  `guessup/avatars/user-<id>-<timestamp>`, cropped on upload to a 512×512 square around the face
+  (`c_fill,g_auto,q_auto`); the saved URL adds `f_auto`. A new photo replaces the old one, and the
+  old Cloudinary file is deleted after the new one is saved. 10 requests per minute per account.
+  400 with a message for a wrong type, a missing file or a file over 2 MB; 503 without the Cloudinary
+  variables; 403 for administrators
+- `DELETE /api/me/avatar` (students only): back to the initials, also deletes the Cloudinary file.
+  Always 204, also when there is no photo
+- `avatarUrl` (never the Cloudinary public id) is now in `GET /api/auth/me`, `GET /api/me` (new,
+  same as `/auth/me`), `PATCH /api/me`, the login/register responses, the leaderboard rows and
+  `me`, `GET /api/admin/students` and `/students/:id`, and the student in `GET /api/admin/sessions`
+  and `/sessions/:id`
+- The Cloudinary code is shared (`api/src/cloudinary/`) and only deletes inside the folder it is
+  given: avatar code only deletes in `guessup/avatars/`, question code only in
+  `guessup/questions/`. Question image uploads are now limited to 1280 px on the longest side
+  (`c_limit,q_auto` on upload, `f_auto` in the URL); SVG pictures are stored as they are
+- Mobile: tap the photo on Profile (or its camera badge) for Take photo / Choose from gallery /
+  Remove photo. The picker crops a square and the phone resizes it to 512×512 JPEG before upload.
+  Photos show on Profile, the Home greeting, the leaderboard (podium, rows and your own row). The
+  admin panel shows them on Students, the student detail and Game Sessions (no admin upload)
+
+### The migration
+
+`api/prisma/migrations/20261005120000_add_user_avatar` adds two nullable columns to `users`:
+
+```sql
+ALTER TABLE "users" ADD COLUMN     "avatarPublicId" TEXT,
+ADD COLUMN     "avatarUrl" TEXT;
+```
+
+It only adds nullable columns, so an API build from before this step keeps working against the
+migrated database. Apply it with `cd api && npx prisma migrate deploy` (Render's build command
+runs the same on the next deploy). Apply it before running the e2e tests against a database: the
+new Prisma client reads both columns on every user query.
 
 ---
 

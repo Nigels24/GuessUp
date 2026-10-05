@@ -19,6 +19,8 @@ function makeUser(overrides: Partial<User> = {}): User {
     role: 'STUDENT',
     yearLevel: '3rd Year',
     status: 'ACTIVE',
+    avatarUrl: null,
+    avatarPublicId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...overrides,
@@ -86,8 +88,8 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('returns a token whose payload holds sub, email and role, and a user without the hash', async () => {
-      const user = makeUser();
+    it('returns a token whose payload holds sub, email and role, and a user without the hash or photo id', async () => {
+      const user = makeUser({ avatarUrl: 'https://res.cloudinary.com/demo/image/upload/f_auto/v1/guessup/avatars/user-user_1-1', avatarPublicId: 'guessup/avatars/user-user_1-1' });
       findUnique.mockResolvedValue(user);
 
       const result = await service.login({ email: ' Student@JHCSC.edu.ph', password: 'fixture-password' });
@@ -100,6 +102,7 @@ describe('AuthService', () => {
         role: 'STUDENT',
         yearLevel: '3rd Year',
         status: 'ACTIVE',
+        avatarUrl: user.avatarUrl,
       });
       const payload = await jwt.verifyAsync<JwtPayload & { exp: number }>(result.accessToken);
       expect(payload).toMatchObject({ sub: user.id, email: user.email, role: 'STUDENT' });

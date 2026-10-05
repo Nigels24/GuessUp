@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 import { PeriodSelect, periodFor, type Period } from "@/components/PeriodSelect";
-import { AccPill, CatPill, Empty, LevelPill, LoadError, Modal, Pager, StatusPill, WideRow } from "@/components/ui";
+import { AccPill, Avatar, CatPill, Empty, LevelPill, LoadError, Modal, Pager, StatusPill, WideRow } from "@/components/ui";
 import { apiFetch } from "@/lib/api";
 import { dateTime, dur, qs } from "@/lib/format";
 import { DIFFICULTIES, LEVELS, SESSION_STATUS, type SessionStatus } from "@/lib/game";
@@ -151,12 +151,17 @@ function Sessions() {
                     <tr key={s.id}>
                       <td className="small whitespace-nowrap">{dateTime(s.startedAt)}</td>
                       <td>
-                        <b>{s.user.fullName}</b>
-                        {!done && (
-                          <div className="mt-0.5">
-                            <StatusPill status={s.status} />
+                        <div className="user-cell">
+                          <Avatar name={s.user.fullName} src={s.user.avatarUrl} />
+                          <div>
+                            <b>{s.user.fullName}</b>
+                            {!done && (
+                              <div className="mt-0.5">
+                                <StatusPill status={s.status} />
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </td>
                       <td>
                         <CatPill category={s.category} />

@@ -443,7 +443,8 @@ describe('Admin Panel API (e2e)', () => {
         .expect(200);
       expect(list.body.total).toBe(1);
       const row = list.body.items[0];
-      expect(row).toMatchObject({ status: 'COMPLETED', answeredCount: 1, user: { id: studentId } });
+      expect(row).toMatchObject({ status: 'COMPLETED', answeredCount: 1, user: { id: studentId, avatarUrl: null } });
+      expect(row.user).not.toHaveProperty('avatarPublicId');
 
       const detail = await request(http).get(`/api/admin/sessions/${row.id}`).set(auth(adminToken)).expect(200);
       expect(detail.body.answers).toHaveLength(1);

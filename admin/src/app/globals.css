@@ -138,8 +138,10 @@
   .user-cell b { @apply block text-sm; }
   .user-cell span.sub { @apply text-xs text-muted; }
   .avatar {
-    @apply grid h-[34px] w-[34px] shrink-0 place-items-center rounded-[10px] bg-brand font-display text-xs font-extrabold text-white;
+    @apply grid h-[34px] w-[34px] shrink-0 place-items-center overflow-hidden rounded-[10px] bg-brand font-display text-xs font-extrabold text-white;
   }
+  .avatar img { @apply h-full w-full object-cover; }
+  .avatar-lg { @apply h-14 w-14 rounded-2xl text-lg; }
 
   .bars { @apply flex flex-col gap-3; }
   .bar-row { @apply grid items-center gap-2.5 text-[13px] font-bold; grid-template-columns: 170px 1fr 48px; }

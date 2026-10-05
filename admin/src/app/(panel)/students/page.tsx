@@ -114,7 +114,7 @@ export default function StudentsPage() {
                   <tr key={u.id}>
                     <td>
                       <div className="user-cell">
-                        <Avatar name={u.fullName} inactive={u.status !== "ACTIVE"} />
+                        <Avatar name={u.fullName} src={u.avatarUrl} inactive={u.status !== "ACTIVE"} />
                         <div>
                           <b>{u.fullName}</b>
                           <span className="sub">{u.email}</span>
@@ -181,10 +181,13 @@ function StudentView({ id, onClose }: { id: string; onClose: () => void }) {
         <p className="muted">Loading…</p>
       ) : (
         <>
-          <p className="muted -mt-1.5">
-            {u.email} · {u.yearLevel || "—"} · joined {date(u.createdAt)}
-            {u.status !== "ACTIVE" && <span className="pill pill-gray ml-2">Inactive</span>}
-          </p>
+          <div className="user-cell -mt-1.5">
+            <Avatar name={u.fullName} src={u.avatarUrl} inactive={u.status !== "ACTIVE"} large />
+            <p className="muted">
+              {u.email} · {u.yearLevel || "—"} · joined {date(u.createdAt)}
+              {u.status !== "ACTIVE" && <span className="pill pill-gray ml-2">Inactive</span>}
+            </p>
+          </div>
           <div className="tiles-4 mt-3.5">
             <div className="kpi">
               <div>

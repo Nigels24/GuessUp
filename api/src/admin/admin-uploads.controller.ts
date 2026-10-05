@@ -17,7 +17,7 @@ import { join } from 'node:path';
 import { IsString, MaxLength } from 'class-validator';
 import { Roles } from '../auth/roles.decorator.js';
 import { AdminQuestionsService } from './admin-questions.service.js';
-import { CloudinaryService, type UploadedImage } from './cloudinary.service.js';
+import { CloudinaryService, type UploadedImage } from '../cloudinary/cloudinary.service.js';
 import { MAX_IMAGE_BYTES, checkImageFile } from './image-file.js';
 import { QUESTION_MESSAGES, isAllowedPublicId } from './question.rules.js';
 
@@ -69,7 +69,7 @@ export class AdminUploadsController {
     this.cloudinary.assertConfigured();
     const checked = checkImageFile(file);
     if ('error' in checked) throw new BadRequestException(checked.error);
-    return this.cloudinary.upload(file!.buffer, 'questions');
+    return this.cloudinary.upload(file!.buffer, 'questions', { vector: checked.kind === 'svg' });
   }
 
   /**
@@ -86,6 +86,6 @@ export class AdminUploadsController {
       throw new ConflictException('A question still uses this image.');
     }
     this.cloudinary.assertConfigured();
-    await this.cloudinary.destroy(query.publicId);
+    await this.cloudinary.destroy(query.publicId, 'questions');
   }
 }

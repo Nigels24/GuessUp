@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Platform,
   Pressable,
   StyleSheet,
@@ -234,19 +235,28 @@ export function Button({
   );
 }
 
-/** Initials on a brand square (the prototype's .avatar / .avatar-lg). */
+/**
+ * The student's profile photo, or their initials on a brand square (the
+ * prototype's .avatar / .avatar-lg) when there is none or it cannot load.
+ * Every avatar in the app goes through here.
+ */
 export function Avatar({
   name,
+  uri,
   size = 44,
   color,
   style,
 }: {
   name: string | undefined;
+  /** The photo (avatarUrl from the API); null or missing shows the initials. */
+  uri?: string | null;
   size?: number;
   /** Background instead of the brand color. */
   color?: string;
   style?: StyleProp<ViewStyle>;
 }) {
+  const [failed, setFailed] = useState<string | null>(null);
+  const photo = uri && failed !== uri ? uri : null;
   return (
     <View
       style={[
@@ -256,9 +266,19 @@ export function Avatar({
         style,
       ]}
     >
-      <Text style={[styles.avatarText, { fontSize: size * 0.39 }]}>
-        {initials(name)}
-      </Text>
+      {photo ? (
+        <Image
+          source={{ uri: photo }}
+          style={styles.avatarPhoto}
+          resizeMode="cover"
+          accessibilityIgnoresInvertColors
+          onError={() => setFailed(photo)}
+        />
+      ) : (
+        <Text style={[styles.avatarText, { fontSize: size * 0.39 }]}>
+          {initials(name)}
+        </Text>
+      )}
     </View>
   );
 }
@@ -485,7 +505,9 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.brand,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
+  avatarPhoto: { width: '100%', height: '100%' },
   avatarText: { color: colors.white, fontWeight: '800' },
   pill: {
     alignSelf: 'flex-start',

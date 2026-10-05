@@ -1,10 +1,12 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { AuthService, toPublicUser } from '../auth/auth.service.js';
 import type { PublicUser } from '../auth/auth.types.js';
+import { CloudinaryService } from '../cloudinary/cloudinary.service.js';
 import { CATEGORY_REF, toHistoryEntry } from '../game/game.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { ChangePasswordDto } from './dto/change-password.dto.js';
 import type { UpdateProfileDto } from './dto/update-profile.dto.js';
+import { AVATAR_MESSAGES, avatarFileName, avatarFileProblem, isOwnAvatar } from './avatar.rules.js';
 import { buildProgress, type MeProgress } from './me.progress.js';
 import { newPasswordProblem, profileProblem, samePasswordProblem } from './me.rules.js';
 import { buildSummary, type MeSummary } from './me.summary.js';
@@ -35,6 +37,7 @@ export class MeService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auth: AuthService,
+    private readonly cloudinary: CloudinaryService,
   ) {}
 
   async summary(user: PublicUser): Promise<MeSummary> {
@@ -114,5 +117,51 @@ export class MeService {
       where: { id: user.id },
       data: { passwordHash: await this.auth.hashPassword(dto.newPassword) },
     });
+  }
+
+  /**
+   * New profile photo. The upload happens first; the user row is then
+   * switched from the photo it had when we started, so two uploads at the
+   * same moment cannot both win (the loser gets 409 and its file is
+   * removed). The previous photo is deleted only after the new one is saved.
+   */
+  async uploadAvatar(user: PublicUser, file?: { buffer: Buffer; size: number }): Promise<PublicUser> {
+    this.cloudinary.assertConfigured();
+    const problem = avatarFileProblem(file);
+    if (problem) throw new BadRequestException(problem);
+
+    const { avatarPublicId: previous } = await this.prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: { avatarPublicId: true },
+    });
+    const uploaded = await this.cloudinary.upload(file!.buffer, 'avatars', {
+      publicId: avatarFileName(user.id),
+    });
+    const saved = await this.prisma.user.updateMany({
+      where: { id: user.id, avatarPublicId: previous },
+      data: { avatarUrl: uploaded.url, avatarPublicId: uploaded.publicId },
+    });
+    if (saved.count !== 1) {
+      await this.cloudinary.destroy(uploaded.publicId, 'avatars');
+      throw new ConflictException(AVATAR_MESSAGES.changed);
+    }
+    if (previous && isOwnAvatar(previous, user.id)) await this.cloudinary.destroy(previous, 'avatars');
+    return toPublicUser(await this.prisma.user.findUniqueOrThrow({ where: { id: user.id } }));
+  }
+
+  /** Back to the initials. Nothing to do (still a success) when there is no photo. */
+  async removeAvatar(user: PublicUser): Promise<void> {
+    const { avatarPublicId } = await this.prisma.user.findUniqueOrThrow({
+      where: { id: user.id },
+      select: { avatarPublicId: true },
+    });
+    const cleared = await this.prisma.user.updateMany({
+      where: { id: user.id, avatarPublicId },
+      data: { avatarUrl: null, avatarPublicId: null },
+    });
+    // count 0: a new photo was saved meanwhile; it stays, and so does its file.
+    if (cleared.count === 1 && avatarPublicId && isOwnAvatar(avatarPublicId, user.id)) {
+      await this.cloudinary.destroy(avatarPublicId, 'avatars');
+    }
   }
 }

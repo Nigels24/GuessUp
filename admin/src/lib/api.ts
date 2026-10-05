@@ -26,6 +26,8 @@ export interface User {
   role: Role;
   yearLevel: string | null;
   status: "ACTIVE" | "INACTIVE";
+  /** Students' profile photo; always null for administrators. */
+  avatarUrl?: string | null;
 }
 
 export interface AuthResponse {

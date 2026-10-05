@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CloudinaryModule } from '../cloudinary/cloudinary.module.js';
 import { AdminCategoriesController } from './admin-categories.controller.js';
 import { AdminCategoriesService } from './admin-categories.service.js';
 import { AdminDashboardService } from './admin-dashboard.service.js';
@@ -11,13 +12,13 @@ import { AdminSessionsService } from './admin-sessions.service.js';
 import { AdminStudentsController } from './admin-students.controller.js';
 import { AdminStudentsService } from './admin-students.service.js';
 import { AdminUploadsController } from './admin-uploads.controller.js';
-import { CloudinaryService } from './cloudinary.service.js';
 
 /**
  * The administrator web panel's API, under /api/admin/... Every controller is
  * @Roles('ADMIN'); the global JwtAuthGuard and RolesGuard enforce it.
  */
 @Module({
+  imports: [CloudinaryModule],
   controllers: [
     AdminCategoriesController,
     AdminQuestionsController,
@@ -33,7 +34,6 @@ import { CloudinaryService } from './cloudinary.service.js';
     AdminSessionsService,
     AdminReportsService,
     AdminDashboardService,
-    CloudinaryService,
   ],
 })
 export class AdminModule {}

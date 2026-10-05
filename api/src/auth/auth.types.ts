@@ -15,6 +15,8 @@ export interface PublicUser {
   role: Role;
   yearLevel: string | null;
   status: UserStatus;
+  /** Profile photo (students); null shows the initials. The Cloudinary public id is never sent. */
+  avatarUrl: string | null;
 }
 
 export interface AuthResponse {

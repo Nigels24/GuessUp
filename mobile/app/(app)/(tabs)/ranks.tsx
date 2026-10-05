@@ -19,9 +19,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Defs, LinearGradient, Rect, Stop } from 'react-native-svg';
-import { bottomNavSpace } from '../../../src/components/BottomNav';
+import { useBottomNavSpace } from '../../../src/components/BottomNav';
 import {
   Avatar,
   Button,
@@ -58,7 +58,7 @@ const playCategory = (categoryId: string) =>
 
 export default function RanksScreen() {
   const { user } = useAuth();
-  const insets = useSafeAreaInsets();
+  const navSpace = useBottomNavSpace();
   const { cat } = useLocalSearchParams<{ cat?: string }>();
 
   const [categories, setCategories] = useState<Category[] | null>(null);
@@ -156,11 +156,13 @@ export default function RanksScreen() {
   }
 
   const isMe = (row: RankingRow) => row.userId === user?.id;
+  // The student's own photo from the signed-in user, so a change shows at once.
+  const photoOf = (row: RankingRow) => (isMe(row) ? (user?.avatarUrl ?? null) : row.avatarUrl);
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView
-        contentContainerStyle={[s.screen, { paddingBottom: bottomNavSpace(insets.bottom) }]}
+        contentContainerStyle={[s.screen, { paddingBottom: navSpace }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -228,7 +230,7 @@ export default function RanksScreen() {
             <View style={s.podium}>
               {[board.rows[1], board.rows[0], board.rows[2]].map((row, i) =>
                 row ? (
-                  <Pod key={row.userId} row={row} me={isMe(row)} />
+                  <Pod key={row.userId} row={row} me={isMe(row)} photo={photoOf(row)} />
                 ) : (
                   <View key={`empty-${i}`} style={s.flex} />
                 ),
@@ -236,11 +238,11 @@ export default function RanksScreen() {
             </View>
 
             {board.me && board.me.rank > 3 ? (
-              <LbRow row={board.me} me pinned name={user?.fullName} />
+              <LbRow row={board.me} me pinned name={user?.fullName} photo={photoOf(board.me)} />
             ) : null}
 
             {board.rows.slice(3).map((row) => (
-              <LbRow key={row.userId} row={row} me={isMe(row)} />
+              <LbRow key={row.userId} row={row} me={isMe(row)} photo={photoOf(row)} />
             ))}
 
             {!board.me ? (
@@ -262,11 +264,11 @@ export default function RanksScreen() {
   );
 }
 
-function Pod({ row, me }: { row: RankingRow; me: boolean }) {
+function Pod({ row, me, photo }: { row: RankingRow; me: boolean; photo: string | null }) {
   const pod = PODIUM[row.rank as 1 | 2 | 3];
   return (
     <View style={s.pod}>
-      <Avatar name={row.fullName} style={[s.podAvatar, me && s.podAvatarMe]} />
+      <Avatar name={row.fullName} uri={photo} style={[s.podAvatar, me && s.podAvatarMe]} />
       <Text style={s.podName} numberOfLines={2}>
         {row.fullName}
       </Text>
@@ -293,9 +295,11 @@ function LbRow({
   me,
   pinned = false,
   name,
+  photo,
 }: {
   row: RankingRow;
   me: boolean;
+  photo: string | null;
   /** The student's row shown above the list. */
   pinned?: boolean;
   /** The name to take initials from (the signed-in student's for the pinned row). */
@@ -309,6 +313,7 @@ function LbRow({
       <Text style={s.lbRank}>{row.rank}</Text>
       <Avatar
         name={name ?? row.fullName}
+        uri={photo}
         size={38}
         color={me ? colors.brand : colors.lbAvatar}
       />

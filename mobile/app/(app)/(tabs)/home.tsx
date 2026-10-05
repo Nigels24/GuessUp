@@ -17,8 +17,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { bottomNavSpace } from '../../../src/components/BottomNav';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useBottomNavSpace } from '../../../src/components/BottomNav';
 import { LevelSheet } from '../../../src/components/LevelSheet';
 import { HistoryRow } from '../../../src/components/rows';
 import {
@@ -52,7 +52,7 @@ interface HomeData {
 
 export default function HomeScreen() {
   const { user } = useAuth();
-  const insets = useSafeAreaInsets();
+  const navSpace = useBottomNavSpace();
   const [data, setData] = useState<HomeData | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -124,7 +124,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <ScrollView
-        contentContainerStyle={[s.screen, { paddingBottom: bottomNavSpace(insets.bottom) }]}
+        contentContainerStyle={[s.screen, { paddingBottom: navSpace }]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -146,7 +146,7 @@ export default function HomeScreen() {
             accessibilityLabel="Profile"
             onPress={() => router.navigate('/profile')}
           >
-            <Avatar name={user?.fullName} />
+            <Avatar name={user?.fullName} uri={user?.avatarUrl} />
           </Pressable>
         </View>
 

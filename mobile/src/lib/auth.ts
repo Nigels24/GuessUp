@@ -29,6 +29,8 @@ export interface User {
   role: 'STUDENT' | 'ADMIN';
   yearLevel: string | null;
   status: 'ACTIVE' | 'INACTIVE';
+  /** Profile photo; null (or missing in a session saved by an older app) shows the initials. */
+  avatarUrl?: string | null;
 }
 
 export interface Session {
@@ -120,4 +122,25 @@ export async function updateProfile(input: {
 /** POST /me/password. A wrong current password is a 400 with the prototype's message. */
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   await api.post('/me/password', { currentPassword, newPassword });
+}
+
+/**
+ * POST /me/avatar with a local JPEG (already cropped and resized). Returns the
+ * updated user. The Content-Type must be multipart here: with the client's
+ * default JSON type, axios would turn the FormData into JSON.
+ */
+export async function uploadAvatar(fileUri: string): Promise<User> {
+  const form = new FormData();
+  // React Native's FormData takes a file as { uri, name, type }.
+  form.append('file', { uri: fileUri, name: 'avatar.jpg', type: 'image/jpeg' } as unknown as Blob);
+  const { data } = await api.post<User>('/me/avatar', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    transformRequest: (body: unknown) => body,
+  });
+  return data;
+}
+
+/** DELETE /me/avatar: back to the initials. */
+export async function removeAvatar(): Promise<void> {
+  await api.delete('/me/avatar');
 }
