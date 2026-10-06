@@ -53,6 +53,12 @@
           "resizeMode": "contain"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "629033ce-85fd-47a4-adad-e735bc2d16ca"
+      }
+    }
   }
 }
