@@ -18,7 +18,7 @@ import { IsString, MaxLength } from 'class-validator';
 import { Roles } from '../auth/roles.decorator.js';
 import { AdminQuestionsService } from './admin-questions.service.js';
 import { CloudinaryService, type UploadedImage } from '../cloudinary/cloudinary.service.js';
-import { MAX_IMAGE_BYTES, checkImageFile } from './image-file.js';
+import { MAX_IMAGE_BYTES, checkImageFile, mobileSafeSvg } from './image-file.js';
 import { QUESTION_MESSAGES, isAllowedPublicId } from './question.rules.js';
 
 /** The part of multer's file object this route uses (kept in memory, never on disk). */
@@ -69,7 +69,10 @@ export class AdminUploadsController {
     this.cloudinary.assertConfigured();
     const checked = checkImageFile(file);
     if ('error' in checked) throw new BadRequestException(checked.error);
-    return this.cloudinary.upload(file!.buffer, 'questions', { vector: checked.kind === 'svg' });
+    if (checked.kind !== 'svg') return this.cloudinary.upload(file!.buffer, 'questions');
+    // Stored as is, so first make it drawable by the app (see mobileSafeSvg).
+    const safe = Buffer.from(mobileSafeSvg(file!.buffer.toString('utf8')), 'utf8');
+    return this.cloudinary.upload(safe, 'questions', { vector: true });
   }
 
   /**

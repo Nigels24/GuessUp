@@ -33,7 +33,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "build:apk": "eas build -p android --profile preview"
+    "build:apk": "eas build -p android --profile preview",
+    "test": "node --test src/lib/svg.test.mjs"
   },
   "private": true
 }

@@ -8,9 +8,16 @@
  * item and starts its clock) … → "See results" (POST /finish) → result.
  * When /current answers 409 every item is answered (or the round is over),
  * so the screen finishes the round and shows the result.
+ * An unexpected error while drawing an item shows ErrorBoundary below, whose
+ * Retry draws the screen again from GET /current; the round is kept.
  */
 import axios from 'axios';
-import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import {
+  router,
+  useFocusEffect,
+  useLocalSearchParams,
+  type ErrorBoundaryProps,
+} from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
@@ -602,6 +609,32 @@ export default function PlayScreen() {
         onContinue={next}
         onRequestClose={confirmQuit}
       />
+    </SafeAreaView>
+  );
+}
+
+/**
+ * Expo Router shows this instead of the screen when drawing it throws, so an
+ * unexpected error never leaves the round silently. Retry mounts the screen
+ * again, which reloads the same item from GET /current (the server keeps the
+ * round and its clock).
+ */
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  const [retrying, setRetrying] = useState(false);
+  if (__DEV__) console.warn('Play screen error:', error);
+  return (
+    <SafeAreaView style={s.safe}>
+      <ErrorView
+        message="Something went wrong loading this item."
+        retrying={retrying}
+        onRetry={() => {
+          setRetrying(true);
+          void retry().finally(() => setRetrying(false));
+        }}
+      />
+      <View style={s.errorHome}>
+        <Button title="Back to Home" variant="ghost" onPress={() => router.dismissTo('/home')} />
+      </View>
     </SafeAreaView>
   );
 }
