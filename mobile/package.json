@@ -34,7 +34,7 @@
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "build:apk": "eas build -p android --profile preview",
-    "test": "node --test src/lib/svg.test.mjs"
+    "test": "node --test src/lib/*.test.mjs"
   },
   "private": true
 }

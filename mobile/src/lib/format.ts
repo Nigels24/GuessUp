@@ -16,6 +16,14 @@ export function num(n: number | null | undefined): string {
   return Number(n || 0).toLocaleString('en-PH');
 }
 
+/**
+ * A count with its noun, singular for exactly 1: "1 round", "2 rounds",
+ * "1,250 pts" (the number as num() writes it). `plural` defaults to noun + s.
+ */
+export function count(n: number, noun: string, plural = `${noun}s`): string {
+  return `${num(n)} ${n === 1 ? noun : plural}`;
+}
+
 /** "just now", "5m ago", "3h ago", "yesterday", "4d ago" */
 export function ago(iso: string | null): string {
   if (!iso) return '';

@@ -206,9 +206,9 @@ describe('Student side: leaderboard, progress, profile (e2e)', () => {
     });
   });
 
-  it('GET /api/me/summary lists all 8 badges for the badge grid', async () => {
+  it('GET /api/me/summary lists all 12 badges for the badge grid', async () => {
     const res = await request(http).get('/api/me/summary').set(auth(tokenA)).expect(200);
-    expect(res.body.allBadges).toHaveLength(8);
+    expect(res.body.allBadges).toHaveLength(12);
     expect(res.body.allBadges[0]).toEqual({
       code: 'first_round',
       icon: expect.any(String),

@@ -212,21 +212,31 @@ describe('demo plan: leaderboard and badges', () => {
     }
   });
 
-  it('badges equal what evaluateBadges gives over all completed rounds, earned when a round ended', () => {
+  it('badges include what evaluateBadges gives over the whole history, each earned once when a round ended', () => {
+    const active = [...new Set(questions.map((q) => q.categoryId))];
     for (const st of plan.students) {
       const mine = completed.filter((s) => s.userId === st.id);
+      const lastEnd = Math.max(...mine.map((s) => s.endedAt.getTime()));
+      const answerLog = plan.answers
+        .filter((a) => plan.sessions.find((s) => s.id === a.sessionId)!.userId === st.id)
+        .filter((a) => a.createdAt.getTime() <= lastEnd)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+        .map((a) => a.isCorrect);
       const stats = badgeStats(
         mine.map((s) => ({ categoryId: s.categoryId, difficulty: s.difficulty, accuracy: s.accuracy, hintsUsed: s.hintsUsed })),
-        mine.flatMap((s) => answersOf(s.id)).map((a) => ({ isCorrect: a.isCorrect, timeTaken: a.timeTaken })),
+        mine.flatMap((s) => answersOf(s.id).map((a) => ({ categoryId: s.categoryId, isCorrect: a.isCorrect, timeTaken: a.timeTaken }))),
+        { answerLog, activeCategoryIds: active },
       );
-      const expected = evaluateBadges(stats, []).map((b) => b.code).sort();
-      const got = plan.badges.filter((b) => b.userId === st.id);
-      expect(got.map((b) => b.badgeCode).sort(), st.email).toEqual(expected);
+      const got = plan.badges.filter((b) => b.userId === st.id).map((b) => b.badgeCode);
+      expect(new Set(got).size, st.email).toBe(got.length);
+      // Subject Master can be earned and later fall below 80%; it is kept, as in the API.
+      for (const code of evaluateBadges(stats, []).map((b) => b.code)) expect(got, st.email).toContain(code);
       const ends = new Set(mine.map((s) => s.endedAt.getTime()));
-      for (const b of got) expect(ends.has(b.earnedAt.getTime())).toBe(true);
+      for (const b of plan.badges.filter((x) => x.userId === st.id)) expect(ends.has(b.earnedAt.getTime())).toBe(true);
     }
-    // Enough variety to show on the profiles.
-    expect(new Set(plan.badges.map((b) => b.badgeCode)).size).toBeGreaterThanOrEqual(BADGES.length - 1);
+    // Enough variety to show on the profiles: every prototype badge at least.
+    const codes = new Set(plan.badges.map((b) => b.badgeCode));
+    expect(BADGES.slice(0, 8).filter((b) => !codes.has(b.code)).length).toBeLessThanOrEqual(1);
   });
 
   it('is deterministic for a seed', () => {

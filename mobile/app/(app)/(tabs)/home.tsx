@@ -31,7 +31,7 @@ import {
 } from '../../../src/components/ui';
 import { apiErrorMessage } from '../../../src/lib/api';
 import { useAuth } from '../../../src/lib/auth-context';
-import { greeting, num, tint } from '../../../src/lib/format';
+import { count, greeting, num, tint } from '../../../src/lib/format';
 import {
   fetchCategories,
   fetchHistory,
@@ -174,7 +174,7 @@ export default function HomeScreen() {
 
         <View style={s.sectionTitle}>
           <Text style={s.sectionHeading}>Subject categories</Text>
-          <Text style={s.sectionMeta}>{categories.length} subjects</Text>
+          <Text style={s.sectionMeta}>{count(categories.length, 'subject')}</Text>
         </View>
         <View style={s.grid}>
           {categories.map((category) => {
@@ -255,8 +255,8 @@ function CategoryCard({
       <Text style={s.catName}>{category.name}</Text>
       <Text style={s.catMeta}>
         {rounds
-          ? `${rounds} round${rounds > 1 ? 's' : ''} · ${accuracy}% accuracy`
-          : `${category.activeQuestionCount} items · not played yet`}
+          ? `${count(rounds, 'round')} · ${accuracy}% accuracy`
+          : `${count(category.activeQuestionCount, 'item')} · not played yet`}
       </Text>
       <View style={s.meter}>
         <View style={[s.meterFill, { width: `${accuracy}%`, backgroundColor: category.color }]} />

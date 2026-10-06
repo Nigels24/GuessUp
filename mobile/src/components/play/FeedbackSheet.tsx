@@ -6,6 +6,7 @@
 import { Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { AnswerResult } from '../../lib/game';
+import { count } from '../../lib/format';
 import { colors } from '../../theme';
 import { Button, ErrorText } from '../ui';
 
@@ -87,7 +88,7 @@ export function FeedbackSheet({
               {gaveUp && <Text style={s.zero}>0 points</Text>}
               {correct && (
                 <Text style={s.points}>
-                  +{feedback.result.pointsEarned} points
+                  +{count(feedback.result.pointsEarned, 'point')}
                   {feedback.hintUsed ? (
                     <Text style={s.penalty}> (hint −{hintPenalty})</Text>
                   ) : null}

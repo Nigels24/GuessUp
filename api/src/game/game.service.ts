@@ -6,12 +6,13 @@ import {
 } from '@nestjs/common';
 import type { GameSession, Prisma } from '@prisma/client';
 import type { PublicUser } from '../auth/auth.types.js';
-import { badgeStats, evaluateBadges } from '../common/badges.js';
+import { evaluateBadges } from '../common/badges.js';
 import { LEVELS, accuracyPercent } from '../common/game-rules.js';
 import { LeaderboardService } from '../leaderboard/leaderboard.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { StartSessionDto } from './dto/start-session.dto.js';
 import type { SubmitAnswerDto } from './dto/submit-answer.dto.js';
+import { loadBadgeStats } from './badge-stats.loader.js';
 import { drawRound, hintFor, judgeAnswer, toItemDto, type GameQuestion } from './game.logic.js';
 import type {
   AnswerResult,
@@ -416,23 +417,10 @@ export class GameService {
     };
   }
 
-  /** Evaluate badges from the student's completed rounds and store the new ones. */
+  /** Evaluate badges from the student's history and store the new ones. */
   private async awardBadges(tx: Prisma.TransactionClient, userId: string) {
-    const [sessions, answers, held] = await Promise.all([
-      tx.gameSession.findMany({
-        where: { userId, status: 'COMPLETED' },
-        select: { categoryId: true, difficulty: true, accuracy: true, hintsUsed: true },
-      }),
-      tx.answer.findMany({
-        where: { session: { userId, status: 'COMPLETED' } },
-        select: { isCorrect: true, timeTaken: true },
-      }),
-      tx.studentBadge.findMany({ where: { userId }, select: { badgeCode: true } }),
-    ]);
-    const earned = evaluateBadges(
-      badgeStats(sessions, answers),
-      held.map((b) => b.badgeCode),
-    );
+    const { stats, held } = await loadBadgeStats(tx, userId);
+    const earned = evaluateBadges(stats, held);
     if (earned.length) {
       await tx.studentBadge.createMany({
         data: earned.map((b) => ({ userId, badgeCode: b.code })),

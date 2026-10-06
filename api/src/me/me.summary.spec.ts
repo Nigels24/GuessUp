@@ -42,9 +42,9 @@ describe('buildSummary', () => {
     ]);
   });
 
-  it('lists all 8 badges with their descriptions, earned or not', () => {
+  it('lists all 12 badges with their descriptions, earned or not', () => {
     const { allBadges } = buildSummary(categories, [], []);
-    expect(allBadges).toHaveLength(8);
+    expect(allBadges).toHaveLength(12);
     expect(allBadges[0]).toEqual({
       code: 'first_round',
       icon: '🎉',

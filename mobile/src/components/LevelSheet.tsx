@@ -8,7 +8,7 @@ import { useEffect, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { apiErrorMessage } from '../lib/api';
-import { tint } from '../lib/format';
+import { count, tint } from '../lib/format';
 import {
   LEVELS,
   ROUND_SIZE,
@@ -109,7 +109,7 @@ export function LevelSheet({
                       <Pill>⏱ {level.seconds}s / item</Pill>
                       <Pill>
                         {level.hints
-                          ? `💡 ${level.hints} hint (−${level.hintPenalty} pts)`
+                          ? `💡 ${count(level.hints, 'hint')} (−${level.hintPenalty} pts)`
                           : '🚫 No hints'}
                       </Pill>
                       <Pill>⭐ {level.points} pts</Pill>

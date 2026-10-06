@@ -1,7 +1,8 @@
 /**
  * Leaderboard (the prototype's #/s/leaderboard). Rankings are per subject
  * category only: a chip per category, then the podium (2nd, 1st, 3rd), the
- * student's own row pinned when ranked below 3rd, and the rest of the top 50.
+ * student's own row pinned when ranked below 3rd, and the rest of the top 50
+ * without that row, so the student appears once (src/lib/ranks.ts).
  * The server ranks (points, then accuracy); the app only draws the rows.
  *
  * Opens on `?cat=<id>` (the result screen's "View"), else the category of the
@@ -34,7 +35,7 @@ import {
 } from '../../../src/components/ui';
 import { apiErrorMessage } from '../../../src/lib/api';
 import { useAuth } from '../../../src/lib/auth-context';
-import { num } from '../../../src/lib/format';
+import { count, num } from '../../../src/lib/format';
 import {
   fetchCategories,
   fetchHistory,
@@ -43,6 +44,7 @@ import {
   type Leaderboard,
   type RankingRow,
 } from '../../../src/lib/game';
+import { boardLayout } from '../../../src/lib/ranks';
 import { colors } from '../../../src/theme';
 
 /** The prototype's .pod-1/2/3 bases: gradient and height. */
@@ -156,6 +158,7 @@ export default function RanksScreen() {
   }
 
   const isMe = (row: RankingRow) => row.userId === user?.id;
+  const layout = board ? boardLayout(board.rows, board.me) : null;
   // The student's own photo from the signed-in user, so a change shows at once.
   const photoOf = (row: RankingRow) => (isMe(row) ? (user?.avatarUrl ?? null) : row.avatarUrl);
 
@@ -228,7 +231,7 @@ export default function RanksScreen() {
         ) : (
           <>
             <View style={s.podium}>
-              {[board.rows[1], board.rows[0], board.rows[2]].map((row, i) =>
+              {[layout!.podium[1], layout!.podium[0], layout!.podium[2]].map((row, i) =>
                 row ? (
                   <Pod key={row.userId} row={row} me={isMe(row)} photo={photoOf(row)} />
                 ) : (
@@ -237,11 +240,17 @@ export default function RanksScreen() {
               )}
             </View>
 
-            {board.me && board.me.rank > 3 ? (
-              <LbRow row={board.me} me pinned name={user?.fullName} photo={photoOf(board.me)} />
+            {layout!.pinned ? (
+              <LbRow
+                row={layout!.pinned}
+                me
+                pinned
+                name={user?.fullName}
+                photo={photoOf(layout!.pinned)}
+              />
             ) : null}
 
-            {board.rows.slice(3).map((row) => (
+            {layout!.list.map((row) => (
               <LbRow key={row.userId} row={row} me={isMe(row)} photo={photoOf(row)} />
             ))}
 
@@ -272,7 +281,7 @@ function Pod({ row, me, photo }: { row: RankingRow; me: boolean; photo: string |
       <Text style={s.podName} numberOfLines={2}>
         {row.fullName}
       </Text>
-      <Text style={s.podPoints}>{num(row.totalPoints)} pts</Text>
+      <Text style={s.podPoints}>{count(row.totalPoints, 'pt', 'pts')}</Text>
       <View style={[s.base, { height: pod.height }]}>
         <Svg style={StyleSheet.absoluteFill}>
           <Defs>
@@ -308,7 +317,7 @@ function LbRow({
   return (
     <View
       style={[s.lbRow, me && s.lbRowMe, pinned && s.lbPinned]}
-      accessibilityLabel={`Rank ${row.rank}, ${me ? 'you' : row.fullName}, ${row.totalPoints} points`}
+      accessibilityLabel={`Rank ${row.rank}, ${me ? 'you' : row.fullName}, ${count(row.totalPoints, 'point')}`}
     >
       <Text style={s.lbRank}>{row.rank}</Text>
       <Avatar
@@ -322,7 +331,7 @@ function LbRow({
           {me ? 'You' : row.fullName}
         </Text>
         <Text style={s.lbMeta}>
-          {row.roundsPlayed} rounds · {row.accuracy}% acc.
+          {count(row.roundsPlayed, 'round')} · {row.accuracy}% acc.
         </Text>
       </View>
       <Text style={s.lbPoints}>{num(row.totalPoints)}</Text>

@@ -50,6 +50,7 @@ import {
   showToast,
 } from '../../../src/components/ui';
 import { apiErrorMessage } from '../../../src/lib/api';
+import { count } from '../../../src/lib/format';
 import {
   abandonRound,
   fetchCurrent,
@@ -461,7 +462,7 @@ export default function PlayScreen() {
             </View>
           </View>
 
-          <View style={s.timer} accessibilityLabel={`${Math.ceil(remaining)} seconds left`}>
+          <View style={s.timer} accessibilityLabel={`${count(Math.ceil(remaining), 'second')} left`}>
             <View style={s.timerBar}>
               <View
                 style={[s.timerFill, { width: `${fraction * 100}%`, backgroundColor: barColor }]}

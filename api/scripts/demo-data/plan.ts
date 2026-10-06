@@ -448,7 +448,8 @@ export function buildDemoPlan(input: PlanInput): DemoPlan {
     sessions,
     answers,
     leaderboard: leaderboardOf(sessions),
-    badges: badgesOf(sessions, answers),
+    // Playable categories: those with active questions, as the API counts them.
+    badges: badgesOf(sessions, answers, [...new Set(input.questions.map((q) => q.categoryId))]),
   };
 }
 
@@ -468,16 +469,30 @@ export function leaderboardOf(sessions: DemoSession[]): DemoLeaderboardEntry[] {
 
 /**
  * Badges as GameService.awardBadges gives them: after each completed round
- * (in time order), evaluateBadges over the student's completed rounds so far;
- * a badge is earned when that round ends.
+ * (in time order), evaluateBadges over the student's completed rounds so far,
+ * every answer given by then (abandoned rounds included, for Hot Streak) and
+ * the playable categories; a badge is earned when that round ends.
  */
-export function badgesOf(sessions: DemoSession[], answers: DemoAnswer[]): DemoBadge[] {
+export function badgesOf(
+  sessions: DemoSession[],
+  answers: DemoAnswer[],
+  activeCategoryIds: string[],
+): DemoBadge[] {
+  const sessionById = new Map(sessions.map((s) => [s.id, s]));
   const answersBySession = new Map<string, BadgeAnswer[]>();
+  /** Each student's answers in every round, oldest first. */
+  const logByUser = new Map<string, DemoAnswer[]>();
   for (const a of answers) {
+    const session = sessionById.get(a.sessionId)!;
     const list = answersBySession.get(a.sessionId) ?? [];
-    list.push({ isCorrect: a.isCorrect, timeTaken: a.timeTaken });
+    list.push({ categoryId: session.categoryId, isCorrect: a.isCorrect, timeTaken: a.timeTaken });
     answersBySession.set(a.sessionId, list);
+    const log = logByUser.get(session.userId) ?? [];
+    log.push(a);
+    logByUser.set(session.userId, log);
   }
+  for (const log of logByUser.values()) log.sort((x, y) => x.createdAt.getTime() - y.createdAt.getTime());
+
   const done = new Map<string, { sessions: BadgeSession[]; answers: BadgeAnswer[]; held: string[] }>();
   const badges: DemoBadge[] = [];
   const completed = sessions
@@ -492,7 +507,11 @@ export function badgesOf(sessions: DemoSession[], answers: DemoAnswer[]): DemoBa
       hintsUsed: s.hintsUsed,
     });
     mine.answers.push(...(answersBySession.get(s.id) ?? []));
-    for (const badge of evaluateBadges(badgeStats(mine.sessions, mine.answers), mine.held)) {
+    const answerLog = (logByUser.get(s.userId) ?? [])
+      .filter((a) => a.createdAt.getTime() <= s.endedAt.getTime())
+      .map((a) => a.isCorrect);
+    const stats = badgeStats(mine.sessions, mine.answers, { answerLog, activeCategoryIds });
+    for (const badge of evaluateBadges(stats, mine.held)) {
       mine.held.push(badge.code);
       badges.push({ userId: s.userId, badgeCode: badge.code, earnedAt: s.endedAt });
     }

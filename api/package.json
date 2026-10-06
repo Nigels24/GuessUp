@@ -27,6 +27,7 @@
     "admin:set-password": "tsx scripts/set-admin-password.ts",
     "demo:seed": "tsx scripts/demo-seed.ts",
     "demo:remove": "tsx scripts/demo-seed.ts --remove",
+    "badges:backfill": "tsx scripts/badges-backfill.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {

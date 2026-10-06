@@ -1,6 +1,6 @@
 /**
  * Profile (the prototype's #/s/profile): the student's photo (or initials),
- * name, email and year level; the 8 badges (earned in color, locked dimmed; tap for
+ * name, email and year level; the 12 badges (earned in color, locked dimmed; tap for
  * details); and Account: Edit profile, Change password, About GuessUp and
  * Log out. The badge list comes from GET /me/summary, reloaded on focus.
  * Tapping the photo takes, chooses or removes it (an addition to the

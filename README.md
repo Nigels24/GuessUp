@@ -75,7 +75,7 @@ behavior, wording and seed content.
 - `PATCH /api/me` (full name, year level) and `POST /api/me/password` (current + new password,
   bcrypt cost 10). A wrong current password is a 400, not a 401, because the apps sign out on 401.
   Password changes are limited to 10 per minute per account
-- `GET /api/me/summary` also lists all 8 badges (`allBadges`) for the badge grid
+- `GET /api/me/summary` also lists all 12 badges (`allBadges`) for the badge grid
 - Mobile app: Ranks (category chips, podium, own row pinned, "Play now"), My Progress, and Profile
   (badges, Edit profile, Change password, About, Log out). The result screen's rank card has
   "View", which opens Ranks on that category. "Play now" and "Practice" open Home with the level

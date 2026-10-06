@@ -22,7 +22,7 @@ import {
 } from '../../../src/components/ui';
 import { Bounce, Confetti, PopIn } from '../../../src/components/motion';
 import { apiErrorMessage } from '../../../src/lib/api';
-import { dur } from '../../../src/lib/format';
+import { count, dur } from '../../../src/lib/format';
 import {
   fetchRound,
   finishedResult,
@@ -218,7 +218,7 @@ export default function ResultScreen() {
                 </Text>
               )}
               <Text style={s.small}>
-                {item.timeTaken}s{item.hintUsed ? ' · 💡 hint used' : ''} · +{item.pointsEarned} pts
+                {item.timeTaken}s{item.hintUsed ? ' · 💡 hint used' : ''} · +{count(item.pointsEarned, 'pt', 'pts')}
               </Text>
             </View>
           </View>

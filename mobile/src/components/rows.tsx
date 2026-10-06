@@ -5,7 +5,7 @@
  */
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { ago, tint } from '../lib/format';
+import { ago, count, tint } from '../lib/format';
 import { levelInfo, type CategoryRef, type HistoryEntry } from '../lib/game';
 import { colors } from '../theme';
 
@@ -31,7 +31,7 @@ export function HistoryRow({ round, first }: { round: HistoryEntry; first: boole
         </Text>
       </View>
       <View style={s.histScore}>
-        <Text style={s.histPoints}>{round.totalScore} pts</Text>
+        <Text style={s.histPoints}>{count(round.totalScore, 'pt', 'pts')}</Text>
         <Text style={[s.histAccuracy, { color: good ? colors.ok : colors.muted }]}>
           {round.accuracy}%
         </Text>
