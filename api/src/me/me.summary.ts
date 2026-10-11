@@ -3,7 +3,8 @@
  * rounds only. Pure, so the counting rules are unit tested.
  */
 import { BADGES } from '../common/badges.js';
-import { accuracyPercent } from '../common/game-rules.js';
+import { categoryCompletions, levelBests, type CertificateRound } from '../common/certificates.js';
+import { accuracyPercent, type DifficultyKey } from '../common/game-rules.js';
 
 export interface SummaryCategory {
   id: string;
@@ -30,6 +31,15 @@ export interface CategoryProgress {
   accuracy: number;
   /** Highest round score; 0 when no round was completed. */
   bestScore: number;
+  /** Best stars (0–3) per level, for the level picker; null when that level was never finished. */
+  bestStars: Record<DifficultyKey, number | null>;
+}
+
+/** A completed category (every level passed, 2+ stars): the student's certificate. */
+export interface SummaryCertificate {
+  categoryId: string;
+  name: string;
+  completedAt: Date;
 }
 
 export interface EarnedBadge {
@@ -54,6 +64,8 @@ export interface MeSummary {
   /** Every badge that can be earned, in display order. */
   allBadges: BadgeInfo[];
   perCategory: CategoryProgress[];
+  /** Completed categories, earliest first (common/certificates.ts). */
+  certificates: SummaryCertificate[];
 }
 
 /** Rounds, accuracy, best and average score of the given completed rounds in one category. */
@@ -77,12 +89,30 @@ export function categoryStats(categoryId: string, sessions: readonly SummarySess
  */
 export function buildSummary(
   categories: readonly SummaryCategory[],
-  sessions: readonly SummarySession[],
+  sessions: readonly CertificateRound[],
   badgeRows: readonly SummaryBadgeRow[],
 ): MeSummary {
+  const bests = levelBests(sessions);
   const perCategory = categories.map((category) => {
     const { roundsPlayed, accuracy, bestScore } = categoryStats(category.id, sessions);
-    return { categoryId: category.id, name: category.name, roundsPlayed, accuracy, bestScore };
+    const levels = bests.get(category.id) ?? {};
+    return {
+      categoryId: category.id,
+      name: category.name,
+      roundsPlayed,
+      accuracy,
+      bestScore,
+      bestStars: {
+        EASY: levels.EASY?.stars ?? null,
+        AVERAGE: levels.AVERAGE?.stars ?? null,
+        DIFFICULT: levels.DIFFICULT?.stars ?? null,
+      },
+    };
+  });
+  const names = new Map(categories.map((c) => [c.id, c.name]));
+  const certificates = categoryCompletions(sessions).flatMap((c) => {
+    const name = names.get(c.categoryId);
+    return name ? [{ categoryId: c.categoryId, name, completedAt: c.completedAt }] : [];
   });
 
   const badges = badgeRows
@@ -101,5 +131,6 @@ export function buildSummary(
     badges,
     allBadges: BADGES.map(({ code, icon, name, description }) => ({ code, icon, name, description })),
     perCategory,
+    certificates,
   };
 }

@@ -1,11 +1,13 @@
 /**
  * Result screen (the prototype's #/s/result): score, accuracy, correct
- * count, time used, rank (with "View" to open that category's leaderboard),
- * badges earned in the round, the answer review, then Home or Play again
+ * count, time used, the round's stars (popping in one by one right after the
+ * round), rank (with "View" to open that category's leaderboard), badges
+ * earned in the round, a "Certificate earned!" notice when the round finished
+ * the last level (2+ stars) of its category, the answer review, then Home or Play again
  * (same category and level).
  *
  * Right after a round (`fresh=1`) it uses the /finish response, which also
- * lists the new badges. Otherwise (a recent round tapped on Home, or after a
+ * lists the new badges and the certificate. Otherwise (a recent round tapped on Home, or after a
  * restart) it loads GET /game/sessions/:id.
  */
 import { router, useLocalSearchParams } from 'expo-router';
@@ -21,8 +23,10 @@ import {
   Pill,
 } from '../../../src/components/ui';
 import { Bounce, Confetti, PopIn } from '../../../src/components/motion';
+import { Stars } from '../../../src/components/Stars';
 import { apiErrorMessage } from '../../../src/lib/api';
 import { count, dur } from '../../../src/lib/format';
+import { starsLabel } from '../../../src/lib/stars';
 import {
   fetchRound,
   finishedResult,
@@ -50,6 +54,7 @@ export default function ResultScreen() {
   const [cached] = useState(() => (isFresh ? finishedResult(sessionId) : null));
   const [data, setData] = useState<SessionResult | null>(cached);
   const newBadges: NewBadge[] = cached?.newBadges ?? [];
+  const certificate = cached?.certificate ?? null;
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -135,6 +140,8 @@ export default function ResultScreen() {
           </View>
           <Text style={s.bigScore}>{session.totalScore}</Text>
           <Text style={s.pointsLabel}>points</Text>
+          <Stars stars={session.stars} size={40} animate={isFresh} delay={450} style={s.stars} />
+          <Text style={s.starsLabel}>{starsLabel(session.stars)}</Text>
         </View>
 
         <View style={s.statRow}>
@@ -166,6 +173,21 @@ export default function ResultScreen() {
               }
             />
           </View>
+        ) : null}
+
+        {certificate ? (
+          <PopIn duration={400} delay={300}>
+            <View style={[s.card, s.certCard]}>
+              <Text style={s.certIcon}>📜</Text>
+              <View style={s.flex}>
+                <Text style={s.bold}>Certificate earned!</Text>
+                <Text style={s.small}>
+                  You passed every level of {certificate.category.icon}{' '}
+                  {certificate.category.name}. Ask your instructor for a printed copy.
+                </Text>
+              </View>
+            </View>
+          </PopIn>
         ) : null}
 
         {newBadges.length ? (
@@ -292,6 +314,17 @@ const s = StyleSheet.create({
   heroCategory: { fontSize: 13, fontWeight: '700', color: colors.muted },
   bigScore: { fontSize: 58, lineHeight: 62, fontWeight: '800', color: colors.brandDark },
   pointsLabel: { fontWeight: '800', color: colors.muted },
+  stars: { marginTop: 10 },
+  starsLabel: { marginTop: 2, fontSize: 15, fontWeight: '800', color: colors.ink2 },
+  certCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: colors.brandSoft,
+  },
+  certIcon: { fontSize: 30 },
   statRow: { flexDirection: 'row', gap: 10, marginVertical: 18 },
   stat: {
     flex: 1,

@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
+import { roundStars } from '../common/stars.js';
 import { CATEGORY_REF } from '../game/game.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { pageOf, type Page } from './dto/query.dto.js';
@@ -47,6 +48,8 @@ function toRow(s: SessionRow, now: Date) {
     accuracy: s.accuracy,
     timeSpent: s.timeSpent,
     hintsUsed: s.hintsUsed,
+    /** 0–3 for a completed round; null for an abandoned or unfinished one. */
+    stars: roundStars({ status: shown.status, correctCount: s.correctCount, totalItems: s.totalItems }),
     /** Items answered so far (equals totalItems for a completed round). */
     answeredCount: s._count.answers,
   };

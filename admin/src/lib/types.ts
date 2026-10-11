@@ -90,6 +90,21 @@ export interface StudentDetail extends StudentRow {
   perCategory: { category: CategoryRef; roundsPlayed: number; accuracy: number; avgScore: number }[];
   topicsToReview: { category: CategoryRef; topic: string; attempts: number; correct: number; wrong: number }[];
   badges: { code: string; icon: string; name: string; earnedAt: string }[];
+  /** Completed categories (every level passed, 2+ stars), earliest first. */
+  certificates: { category: CategoryRef; completedAt: string }[];
+}
+
+/** GET /admin/certificates: one earned category completion certificate. */
+export interface CertificateRow {
+  student: { id: string; fullName: string; email: string; yearLevel: string | null };
+  category: CategoryRef;
+  completedAt: string;
+}
+
+/** GET /admin/certificates/:studentId/:categoryId: the printable certificate. */
+export interface CertificateDetail extends CertificateRow {
+  /** The best round per level, Easy → Difficult. */
+  levels: { difficulty: Difficulty; rounds: number; correctCount: number; totalItems: number; totalScore: number; stars: number }[];
 }
 
 export interface SessionRow {
@@ -106,6 +121,8 @@ export interface SessionRow {
   accuracy: number;
   timeSpent: number;
   hintsUsed: number;
+  /** 0–3 for a completed round (api/src/common/stars.ts); null when abandoned or unfinished. */
+  stars: number | null;
   answeredCount: number;
 }
 

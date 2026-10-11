@@ -5,6 +5,7 @@ export const NAV = [
   { href: "/categories", icon: "🗂️", label: "Categories" },
   { href: "/students", icon: "👥", label: "Students" },
   { href: "/sessions", icon: "🎮", label: "Game Sessions" },
+  { href: "/certificates", icon: "📜", label: "Certificates" },
   { href: "/reports", icon: "📑", label: "Reports" },
 ] as const;
 

@@ -107,7 +107,11 @@ export interface MeSummary {
     /** 0–100 */
     accuracy: number;
     bestScore: number;
+    /** Best stars (0–3) per level; null = that level never finished. */
+    bestStars: Record<Difficulty, number | null>;
   }[];
+  /** Completed categories (every level passed, 2+ stars), earliest first. */
+  certificates: { categoryId: string; name: string; completedAt: string }[];
 }
 
 /** GET /game/history: one finished round */
@@ -120,6 +124,8 @@ export interface HistoryEntry {
   accuracy: number;
   correctCount: number;
   totalItems: number;
+  /** 0–3 (decided by the server from the accuracy). */
+  stars: number;
   endedAt: string | null;
 }
 
@@ -283,6 +289,8 @@ export interface SessionSummary {
   /** Seconds */
   timeSpent: number;
   hintsUsed: number;
+  /** 0–3 (decided by the server from the accuracy). */
+  stars: number;
 }
 
 export interface ReviewItem {
@@ -317,6 +325,8 @@ export interface NewBadge {
 /** POST /game/sessions/:id/finish */
 export interface FinishResult extends SessionResult {
   newBadges: NewBadge[];
+  /** Set when this round finished the last missing level of its category. */
+  certificate: { category: CategoryRef; completedAt: string } | null;
 }
 
 /**

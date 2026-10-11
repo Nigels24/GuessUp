@@ -20,6 +20,24 @@ export function date(value: string | Date | null | undefined): string {
   return new Date(value).toLocaleDateString("en-PH", { timeZone: TZ, month: "short", day: "numeric", year: "numeric" });
 }
 
+/** "October 9, 2026" (certificates). */
+export function longDate(value: string | Date | null | undefined): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString("en-PH", { timeZone: TZ, month: "long", day: "numeric", year: "numeric" });
+}
+
+/** "Oct 9, 2026, 4:55 PM" (printouts). */
+export function printedAt(value: Date): string {
+  return value.toLocaleString("en-PH", {
+    timeZone: TZ,
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
 export function dateTime(value: string | Date | null | undefined): string {
   if (!value) return "—";
   return new Date(value).toLocaleString("en-PH", {

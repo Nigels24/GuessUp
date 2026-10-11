@@ -28,6 +28,16 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [slow, setSlow] = useState(false);
+  // False in the server-rendered HTML: the form cannot be sent until React handles it.
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+    // A native GET submit (before hydration, or an old bookmark) put the fields in the
+    // URL. Drop them from the address bar and history; never fill anything from them.
+    const query = new URLSearchParams(window.location.search);
+    if (query.has("password") || query.has("email")) router.replace("/login");
+  }, [router]);
 
   useEffect(() => {
     if (ready && token) router.replace("/dashboard");
@@ -84,7 +94,12 @@ export default function LoginPage() {
         <div className="w-full max-w-[380px]">
           <h1 className="text-[28px]">Welcome back</h1>
           <p className="mb-[22px] mt-1 text-muted">Sign in with an administrator account.</p>
-          <form onSubmit={onSubmit} noValidate>
+          {/*
+            Signing in is JS only (fetch to the API). method="post" keeps the fields out of
+            the URL if the browser ever submits natively, and the button stays disabled
+            until hydration, which also blocks Enter-to-submit (no enabled submit button).
+          */}
+          <form method="post" action="/login" onSubmit={onSubmit} noValidate>
             <div className="field">
               <label htmlFor="em">Email address</label>
               <input
@@ -105,7 +120,7 @@ export default function LoginPage() {
             <div className="error-text" role="alert">
               {error}
             </div>
-            <button className="btn btn-primary mt-1 w-full" type="submit" disabled={loading}>
+            <button className="btn btn-primary mt-1 w-full" type="submit" disabled={loading || !hydrated}>
               {loading ? "Signing in…" : "Sign in"}
             </button>
             {slow && (

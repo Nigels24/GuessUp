@@ -59,7 +59,7 @@ function ProfileSection({ user }: { user: User }) {
   }
 
   return (
-    <form className="panel" onSubmit={(e) => void save(e)} noValidate>
+    <form className="panel" method="post" onSubmit={(e) => void save(e)} noValidate>
       <div className="panel-head">
         <h3>Profile</h3>
       </div>
@@ -225,7 +225,7 @@ function PasswordSection() {
   }
 
   return (
-    <form className="panel" onSubmit={(e) => void save(e)} noValidate>
+    <form className="panel" method="post" onSubmit={(e) => void save(e)} noValidate>
       <div className="panel-head">
         <h3>Change password</h3>
       </div>

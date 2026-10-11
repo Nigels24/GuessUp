@@ -1,7 +1,9 @@
 /**
  * The prototype's level picker: a bottom sheet with the category's
  * description, the three levels (Easy selected first) with their timer, hint
- * and points rules, and "▶ Start round (5 items)". Starting calls
+ * and points rules, the best stars earned on each level (empty when never
+ * played), a certificate hint until every level has 2+ stars, and
+ * "▶ Start round (5 items)". Starting calls
  * POST /game/sessions; the caller navigates with the returned round.
  */
 import { useEffect, useState } from 'react';
@@ -17,16 +19,21 @@ import {
   type Difficulty,
   type RoundState,
 } from '../lib/game';
+import { allLevelsPassed, PASSING_STARS } from '../lib/stars';
 import { colors } from '../theme';
+import { Stars } from './Stars';
 import { ErrorText, Pill, PrimaryButton } from './ui';
 
 export function LevelSheet({
   category,
+  bestStars,
   onClose,
   onStarted,
 }: {
   /** The category to play; null hides the sheet. */
   category: Category | null;
+  /** The student's best stars per level in this category (null = never finished). */
+  bestStars?: Record<Difficulty, number | null>;
   onClose: () => void;
   onStarted: (round: RoundState) => void;
 }) {
@@ -103,7 +110,10 @@ export function LevelSheet({
                     <Text style={s.dotIcon}>{level.icon}</Text>
                   </View>
                   <View style={s.optBody}>
-                    <Text style={s.optLabel}>{level.label}</Text>
+                    <View style={s.optHead}>
+                      <Text style={s.optLabel}>{level.label}</Text>
+                      <Stars stars={bestStars?.[level.key] ?? null} size={15} />
+                    </View>
                     <Text style={s.optDesc}>{level.desc}</Text>
                     <View style={s.rules}>
                       <Pill>⏱ {level.seconds}s / item</Pill>
@@ -118,6 +128,11 @@ export function LevelSheet({
                 </Pressable>
               );
             })}
+            {bestStars && !allLevelsPassed(bestStars) ? (
+              <Text style={s.certHint}>
+                🏅 Get {PASSING_STARS} stars on Easy, Average and Difficult to earn this certificate.
+              </Text>
+            ) : null}
             {error ? <ErrorText>{error}</ErrorText> : null}
             <View style={s.go}>
               <PrimaryButton
@@ -182,8 +197,10 @@ const s = StyleSheet.create({
   },
   dotIcon: { fontSize: 20 },
   optBody: { flex: 1 },
+  optHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   optLabel: { fontSize: 16, fontWeight: '800', color: colors.ink },
   optDesc: { color: colors.muted, fontWeight: '700', fontSize: 13 },
+  certHint: { color: colors.muted, fontWeight: '700', fontSize: 13, textAlign: 'center', marginTop: 2, marginBottom: 6 },
   rules: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 5 },
   go: { marginTop: 6 },
 });

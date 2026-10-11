@@ -2,8 +2,8 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { PeriodSelect, periodFor, type Period } from "@/components/PeriodSelect";
-import { AccPill, Avatar, CatPill, Empty, LevelPill, LoadError, Modal, Pager, StatusPill, WideRow } from "@/components/ui";
+import { PeriodSelect, periodFor, periodText, type Period } from "@/components/PeriodSelect";
+import { AccPill, Avatar, CatPill, Empty, LevelPill, LoadError, Modal, Pager, PrintHeader, Stars, StatusPill, WideRow } from "@/components/ui";
 import { apiFetch } from "@/lib/api";
 import { dateTime, dur, qs } from "@/lib/format";
 import { DIFFICULTIES, LEVELS, SESSION_STATUS, type SessionStatus } from "@/lib/game";
@@ -64,6 +64,18 @@ function Sessions() {
 
   return (
     <>
+      <PrintHeader
+        landscape
+        title="Recorded game sessions"
+        details={[
+          studentId ? `Student: ${studentName ?? "one student"}` : searchText && `Search: “${searchText}”`,
+          cat ? (categories.data?.find((c) => c.id === cat)?.name ?? "One category") : "All categories",
+          level ? LEVELS[level as keyof typeof LEVELS].label : "All levels",
+          status ? SESSION_STATUS[status as SessionStatus].label : "Any status",
+          periodText(period),
+          list.data && `page ${page} of ${Math.max(1, Math.ceil(list.data.total / PAGE_SIZE))} (${list.data.total} sessions)`,
+        ]}
+      />
       <div className="page-head">
         <div>
           <h2>Recorded game sessions</h2>
@@ -71,7 +83,7 @@ function Sessions() {
         </div>
       </div>
       <div className="panel">
-        <div className="toolbar">
+        <div className="toolbar no-print">
           {studentId ? (
             <span className="pill pill-brand !py-1.5 text-[13px]">
               👤 {studentName ?? "One student"}
@@ -126,22 +138,23 @@ function Sessions() {
                 <th>Score</th>
                 <th>Correct</th>
                 <th>Accuracy</th>
+                <th>Stars</th>
                 <th>Time</th>
                 <th>Hints</th>
-                <th />
+                <th className="actions" />
               </tr>
             </thead>
             <tbody className={list.loading && list.data ? "opacity-60" : ""}>
               {list.error ? (
-                <WideRow cols={10}>
+                <WideRow cols={11}>
                   <LoadError message={list.error} onRetry={list.reload} />
                 </WideRow>
               ) : !list.data ? (
-                <WideRow cols={10}>
+                <WideRow cols={11}>
                   <Empty icon="⏳">Loading sessions…</Empty>
                 </WideRow>
               ) : !rows.length ? (
-                <WideRow cols={10}>
+                <WideRow cols={11}>
                   <Empty icon="🎮">No sessions in this period.</Empty>
                 </WideRow>
               ) : (
@@ -177,6 +190,9 @@ function Sessions() {
                         {!done && <span className="muted small block">{s.answeredCount} answered</span>}
                       </td>
                       <td>{done ? <AccPill value={s.accuracy} /> : "—"}</td>
+                      <td>
+                        <Stars value={s.stars} />
+                      </td>
                       <td className="small">{done ? dur(s.timeSpent) : "—"}</td>
                       <td>{done ? s.hintsUsed : "—"}</td>
                       <td className="actions">
@@ -221,6 +237,12 @@ function SessionView({ id, onClose }: { id: string; onClose: () => void }) {
           <p className="muted -mt-1.5">
             {s.user.fullName} · {s.category.icon} {s.category.name} · {LEVELS[s.difficulty].label} · {dateTime(s.startedAt)} ·{" "}
             <b>{s.totalScore} pts</b>
+            {s.stars !== null && (
+              <>
+                {" "}
+                · <Stars value={s.stars} />
+              </>
+            )}
             {s.status !== "COMPLETED" && (
               <span className="ml-2">
                 <StatusPill status={s.status} />

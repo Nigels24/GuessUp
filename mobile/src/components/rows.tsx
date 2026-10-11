@@ -8,6 +8,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ago, count, tint } from '../lib/format';
 import { levelInfo, type CategoryRef, type HistoryEntry } from '../lib/game';
 import { colors } from '../theme';
+import { Stars } from './Stars';
 
 export function HistoryRow({ round, first }: { round: HistoryEntry; first: boolean }) {
   const good = round.accuracy >= 60;
@@ -32,9 +33,12 @@ export function HistoryRow({ round, first }: { round: HistoryEntry; first: boole
       </View>
       <View style={s.histScore}>
         <Text style={s.histPoints}>{count(round.totalScore, 'pt', 'pts')}</Text>
-        <Text style={[s.histAccuracy, { color: good ? colors.ok : colors.muted }]}>
-          {round.accuracy}%
-        </Text>
+        <View style={s.histLine}>
+          <Stars stars={round.stars} size={11} />
+          <Text style={[s.histAccuracy, { color: good ? colors.ok : colors.muted }]}>
+            {round.accuracy}%
+          </Text>
+        </View>
       </View>
     </Pressable>
   );
@@ -80,6 +84,7 @@ const s = StyleSheet.create({
   histMeta: { fontSize: 13, color: colors.muted },
   histScore: { alignItems: 'flex-end' },
   histPoints: { fontWeight: '800', color: colors.brandDark },
+  histLine: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   histAccuracy: { fontSize: 13, fontWeight: '800' },
   catLine: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
   catIcon: {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AccPill, Avatar, Bars, Empty, LoadError, Modal, Pager, WideRow, useFeedback } from "@/components/ui";
+import { AccPill, Avatar, Bars, Empty, LoadError, Modal, Pager, PrintHeader, WideRow, useFeedback } from "@/components/ui";
 import { apiFetch } from "@/lib/api";
 import { ago, date, num, qs } from "@/lib/format";
 import { YEAR_LEVELS } from "@/lib/game";
@@ -61,6 +61,15 @@ export default function StudentsPage() {
 
   return (
     <>
+      <PrintHeader
+        title="Student accounts"
+        details={[
+          searchText && `Search: “${searchText}”`,
+          year || "All year levels",
+          status === "ACTIVE" ? "Active" : status === "INACTIVE" ? "Inactive" : "Any status",
+          list.data && `page ${page} of ${Math.max(1, Math.ceil(list.data.total / PAGE_SIZE))} (${list.data.total} students)`,
+        ]}
+      />
       <div className="page-head">
         <div>
           <h2>Student accounts</h2>
@@ -68,7 +77,7 @@ export default function StudentsPage() {
         </div>
       </div>
       <div className="panel">
-        <div className="toolbar">
+        <div className="toolbar no-print">
           <input className="input search" value={search} onChange={filter(setSearch)} placeholder="🔍 Search name or email…" aria-label="Search" />
           <select className="input" value={year} onChange={filter(setYear)} aria-label="Year level">
             <option value="">All year levels</option>
@@ -93,7 +102,7 @@ export default function StudentsPage() {
                 <th>Accuracy</th>
                 <th>Last active</th>
                 <th>Status</th>
-                <th />
+                <th className="actions" />
               </tr>
             </thead>
             <tbody className={list.loading && list.data ? "opacity-60" : ""}>
@@ -257,6 +266,27 @@ function StudentView({ id, onClose }: { id: string; onClose: () => void }) {
               )}
             </div>
           </div>
+          <h3 className="mb-2.5 mt-5 text-base">Certificates</h3>
+          {u.certificates.length ? (
+            <div className="flex flex-col gap-2">
+              {u.certificates.map((c) => (
+                <div key={c.category.id} className="flex flex-wrap items-center gap-2.5">
+                  <span className="grid h-9 w-9 place-items-center rounded-[11px] text-lg" style={{ background: `${c.category.color}1f` }}>
+                    {c.category.icon}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <b className="block text-sm">{c.category.name}</b>
+                    <span className="muted small">All levels passed · {date(c.completedAt)}</span>
+                  </div>
+                  <Link className="btn btn-ghost btn-sm" href={`/certificates/${id}/${c.category.id}`}>
+                    📜 View / Print
+                  </Link>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">None yet. A certificate is earned by finishing an Easy, Average and Difficult round in one category.</p>
+          )}
         </>
       )}
     </Modal>

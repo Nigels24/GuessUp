@@ -1,8 +1,10 @@
 /**
  * Profile (the prototype's #/s/profile): the student's photo (or initials),
  * name, email and year level; the 12 badges (earned in color, locked dimmed; tap for
- * details); and Account: Edit profile, Change password, About GuessUp and
- * Log out. The badge list comes from GET /me/summary, reloaded on focus.
+ * details); Certificates (categories with every level passed at 2+ stars; printed by
+ * the instructor from the admin panel); and Account: Edit profile, Change
+ * password, About GuessUp and Log out. Badges and certificates come from
+ * GET /me/summary, reloaded on focus.
  * Tapping the photo takes, chooses or removes it (an addition to the
  * prototype).
  */
@@ -199,6 +201,35 @@ export default function ProfileScreen() {
         ) : (
           <ActivityIndicator color={colors.brand} style={s.spinner} />
         )}
+
+        {summary ? (
+          <>
+            <SectionTitle
+              title="Certificates"
+              right={summary.certificates.length ? String(summary.certificates.length) : undefined}
+            />
+            <View style={s.certs}>
+              {summary.certificates.length ? (
+                <>
+                  {summary.certificates.map((cert, i) => (
+                    <View key={cert.categoryId} style={[s.certRow, i > 0 && s.menuDivider]}>
+                      <Text style={s.certIcon}>📜</Text>
+                      <View style={s.flex}>
+                        <Text style={s.certName}>{cert.name}</Text>
+                        <Text style={s.small}>All levels passed · {date(cert.completedAt)}</Text>
+                      </View>
+                    </View>
+                  ))}
+                  <Text style={[s.small, s.certNote]}>Ask your instructor for a printed copy.</Text>
+                </>
+              ) : (
+                <Text style={[s.small, s.certEmpty]}>
+                  Get 2 stars on Easy, Average and Difficult in a subject to earn its certificate.
+                </Text>
+              )}
+            </View>
+          </>
+        ) : null}
 
         <SectionTitle title="Account" />
         <View style={s.menu}>
@@ -491,6 +522,12 @@ const s = StyleSheet.create({
   badgeNameLocked: { color: colors.muted },
   badgeError: { gap: 8, alignItems: 'flex-start' },
   spinner: { marginVertical: 20 },
+  certs: { backgroundColor: colors.white, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 4, ...cardShadow },
+  certRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 11 },
+  certIcon: { fontSize: 26 },
+  certName: { fontSize: 15, fontWeight: '800', color: colors.ink },
+  certNote: { paddingBottom: 12, paddingTop: 2 },
+  certEmpty: { paddingVertical: 14, lineHeight: 19 },
   menu: { backgroundColor: colors.white, borderRadius: 20, overflow: 'hidden', ...cardShadow },
   menuItem: { paddingVertical: 14, paddingHorizontal: 16 },
   menuDivider: { borderTopWidth: 1, borderTopColor: colors.line },

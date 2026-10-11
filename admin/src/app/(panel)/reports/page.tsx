@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { PeriodSelect, periodFor, type Period } from "@/components/PeriodSelect";
-import { AccPill, Bars, CatPill, Cols, Kpi, LevelPill, LoadError, WideRow, Avatar, useFeedback } from "@/components/ui";
+import { PeriodSelect, periodFor, periodText, type Period } from "@/components/PeriodSelect";
+import { AccPill, Bars, CatPill, Cols, Kpi, LevelPill, LoadError, PrintHeader, WideRow, Avatar, useFeedback } from "@/components/ui";
 import { apiDownload, apiFetch } from "@/lib/api";
 import { date, num, qs, shortDay } from "@/lib/format";
 import { TYPES } from "@/lib/game";
@@ -58,6 +58,16 @@ export default function ReportsPage() {
 
   return (
     <>
+      <PrintHeader
+        landscape
+        title="Performance reports"
+        details={[
+          periodText(a ?? period),
+          cat ? (categories.data?.find((c) => c.id === cat)?.name ?? "One category") : "All categories",
+          "completed rounds only",
+          `most missed: items answered at least ${minAttempts} time${minAttempts === 1 ? "" : "s"}`,
+        ]}
+      />
       <div className="page-head">
         <div>
           <h2>Performance reports</h2>
@@ -79,7 +89,7 @@ export default function ReportsPage() {
         </div>
       </div>
       {a && (
-        <p className="muted small -mt-2.5 mb-3.5">
+        <p className="muted small no-print -mt-2.5 mb-3.5">
           {date(`${a.from}T12:00:00+08:00`)} – {date(`${a.to}T12:00:00+08:00`)} · completed rounds only
         </p>
       )}

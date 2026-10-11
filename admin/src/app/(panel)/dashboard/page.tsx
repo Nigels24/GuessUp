@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { AccPill, Avatar, Bars, CatPill, Cols, Kpi, LevelPill, LoadError, WideRow } from "@/components/ui";
+import { periodText } from "@/components/PeriodSelect";
+import { AccPill, Avatar, Bars, CatPill, Cols, Kpi, LevelPill, LoadError, PrintHeader, WideRow } from "@/components/ui";
 import { apiFetch } from "@/lib/api";
 import { ago } from "@/lib/format";
 import type { DashboardSummary } from "@/lib/types";
@@ -13,12 +14,13 @@ export default function DashboardPage() {
 
   return (
     <>
+      <PrintHeader title="Dashboard overview" details={["Activity in the last 30 days", d && periodText(d)]} />
       <div className="page-head">
         <div>
           <h2>Overview</h2>
           <p>Activity in the last 30 days</p>
         </div>
-        <Link className="btn btn-primary" href="/questions?new=1">
+        <Link className="btn btn-primary no-print" href="/questions?new=1">
           ＋ Add question
         </Link>
       </div>

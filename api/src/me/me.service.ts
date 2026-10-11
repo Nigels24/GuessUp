@@ -29,6 +29,15 @@ const SESSION_TOTALS = {
   totalItems: true,
 } as const;
 
+/** SESSION_TOTALS plus what stars and certificates need (common/certificates.ts). */
+const SESSION_LEVELS = {
+  ...SESSION_TOTALS,
+  id: true,
+  difficulty: true,
+  status: true,
+  endedAt: true,
+} as const;
+
 /** Same order as GET /categories (seed order). */
 const CATEGORY_ORDER = [{ createdAt: 'asc' }, { id: 'asc' }] as const;
 
@@ -48,7 +57,7 @@ export class MeService {
       }),
       this.prisma.gameSession.findMany({
         where: { userId: user.id, ...COMPLETED_ROUND },
-        select: SESSION_TOTALS,
+        select: SESSION_LEVELS,
       }),
       this.prisma.studentBadge.findMany({
         where: { userId: user.id },

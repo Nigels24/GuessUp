@@ -210,6 +210,7 @@ export default function HomeScreen() {
 
       <LevelSheet
         category={sheetCategory}
+        bestStars={summary.perCategory.find((p) => p.categoryId === sheetCategory?.id)?.bestStars}
         onClose={() => setSheetCategory(null)}
         onStarted={(round) => {
           setSheetCategory(null);

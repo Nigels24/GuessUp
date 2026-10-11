@@ -1,6 +1,6 @@
 "use client";
 
-import { daysBefore, today } from "@/lib/format";
+import { date, daysBefore, today } from "@/lib/format";
 
 /** A period as the API takes it: Philippine calendar days, both inclusive; empty = open. */
 export interface Period {
@@ -21,6 +21,15 @@ export function periodFor(preset: string): Period {
   if (!p) return { preset, from: "", to: "" };
   const to = today();
   return { preset, from: daysBefore(to, p.days - 1), to };
+}
+
+/** "Sep 10, 2026 – Oct 9, 2026", "From …", "Until …" or "All time" (printouts). */
+export function periodText(period: Pick<Period, "from" | "to">): string {
+  const day = (d: string) => date(`${d}T12:00:00+08:00`);
+  if (period.from && period.to) return `${day(period.from)} – ${day(period.to)}`;
+  if (period.from) return `From ${day(period.from)}`;
+  if (period.to) return `Until ${day(period.to)}`;
+  return "All time";
 }
 
 /**

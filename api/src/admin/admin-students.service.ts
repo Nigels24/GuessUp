@@ -5,6 +5,7 @@ import { accuracyPercent } from '../common/game-rules.js';
 import { CATEGORY_REF } from '../game/game.service.js';
 import { buildProgress, type CategoryAccuracy, type TopicToReview } from '../me/me.progress.js';
 import { PrismaService } from '../prisma/prisma.service.js';
+import { AdminCertificatesService, type CertificateRow } from './admin-certificates.service.js';
 import { pageOf, type Page } from './dto/query.dto.js';
 import type { StudentListQueryDto, UserStatusKey } from './dto/student.dto.js';
 
@@ -35,6 +36,8 @@ export interface StudentDetail extends StudentRow {
   perCategory: CategoryAccuracy[];
   topicsToReview: TopicToReview[];
   badges: { code: string; icon: string; name: string; earnedAt: Date }[];
+  /** Completed categories, earliest first. */
+  certificates: Omit<CertificateRow, 'student'>[];
 }
 
 const STUDENT_FIELDS = {
@@ -53,7 +56,10 @@ const STUDENT_FIELDS = {
  */
 @Injectable()
 export class AdminStudentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly certificates: AdminCertificatesService,
+  ) {}
 
   /** Highest points first, as in the prototype; stats from completed rounds. */
   async list(query: StudentListQueryDto): Promise<Page<StudentRow>> {
@@ -87,7 +93,7 @@ export class AdminStudentsService {
     });
     if (!student) throw new NotFoundException(STUDENT_NOT_FOUND);
 
-    const [categories, sessions, answers, badges, stats] = await Promise.all([
+    const [categories, sessions, answers, badges, stats, certificates] = await Promise.all([
       this.prisma.category.findMany({
         orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
         select: CATEGORY_REF,
@@ -102,6 +108,7 @@ export class AdminStudentsService {
       }),
       this.prisma.studentBadge.findMany({ where: { userId: id }, orderBy: { earnedAt: 'asc' } }),
       this.stats([id]),
+      this.certificates.forStudent(id),
     ]);
 
     const progress = buildProgress(
@@ -119,6 +126,7 @@ export class AdminStudentsService {
         const badge = BADGES.find((x) => x.code === b.badgeCode);
         return badge ? [{ code: badge.code, icon: badge.icon, name: badge.name, earnedAt: b.earnedAt }] : [];
       }),
+      certificates: certificates.map(({ category, completedAt }) => ({ category, completedAt })),
     };
   }
 

@@ -7,7 +7,9 @@ import {
 import type { GameSession, Prisma } from '@prisma/client';
 import type { PublicUser } from '../auth/auth.types.js';
 import { evaluateBadges } from '../common/badges.js';
+import { categoryCompletions } from '../common/certificates.js';
 import { LEVELS, accuracyPercent } from '../common/game-rules.js';
+import { roundStars } from '../common/stars.js';
 import { LeaderboardService } from '../leaderboard/leaderboard.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { StartSessionDto } from './dto/start-session.dto.js';
@@ -17,6 +19,7 @@ import { drawRound, hintFor, judgeAnswer, toItemDto, type GameQuestion } from '.
 import type {
   AnswerResult,
   CategoryRef,
+  EarnedCertificate,
   FinishResult,
   HistoryEntry,
   RoundState,
@@ -70,6 +73,7 @@ export function toHistoryEntry(s: SessionWithCategory): HistoryEntry {
     accuracy: s.accuracy,
     correctCount: s.correctCount,
     totalItems: s.totalItems,
+    stars: roundStars(s) ?? 0,
     endedAt: s.endedAt,
   };
 }
@@ -318,6 +322,7 @@ export class GameService {
         name,
         description,
       })),
+      certificate: await this.certificateEarnedBy(session),
     };
   }
 
@@ -430,6 +435,31 @@ export class GameService {
     return earned;
   }
 
+  /**
+   * The category certificate, when this (just completed) round finished the
+   * last level the student was missing in its category. Derived from the
+   * student's finished rounds there; nothing is stored.
+   */
+  private async certificateEarnedBy(session: SessionWithCategory): Promise<EarnedCertificate | null> {
+    const rounds = await this.prisma.gameSession.findMany({
+      where: { userId: session.userId, categoryId: session.categoryId, status: 'COMPLETED' },
+      select: {
+        id: true,
+        categoryId: true,
+        difficulty: true,
+        status: true,
+        correctCount: true,
+        totalItems: true,
+        totalScore: true,
+        endedAt: true,
+      },
+    });
+    const completion = categoryCompletions(rounds)[0];
+    return completion?.completedByRoundId === session.id
+      ? { category: session.category, completedAt: completion.completedAt }
+      : null;
+  }
+
   /** Summary, rank and review of a completed round (the Result screen). */
   private async result(sessionId: string): Promise<SessionResult> {
     const session = await this.prisma.gameSession.findUniqueOrThrow({
@@ -464,6 +494,7 @@ export class GameService {
       accuracy: session.accuracy,
       timeSpent: session.timeSpent,
       hintsUsed: session.hintsUsed,
+      stars: roundStars(session) ?? 0,
     };
 
     return {

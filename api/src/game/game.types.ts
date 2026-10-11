@@ -67,6 +67,8 @@ export interface SessionSummary {
   accuracy: number;
   timeSpent: number;
   hintsUsed: number;
+  /** 0–3, from the round's accuracy (common/stars.ts). */
+  stars: number;
 }
 
 export interface ReviewItem {
@@ -96,8 +98,16 @@ export interface SessionResult {
   review: ReviewItem[];
 }
 
+/** A category completed by the round just finished (common/certificates.ts). */
+export interface EarnedCertificate {
+  category: CategoryRef;
+  completedAt: Date;
+}
+
 export interface FinishResult extends SessionResult {
   newBadges: NewBadge[];
+  /** Set when this round finished the last missing level of its category; otherwise null. */
+  certificate: EarnedCertificate | null;
 }
 
 export interface HistoryEntry {
@@ -108,5 +118,7 @@ export interface HistoryEntry {
   accuracy: number;
   correctCount: number;
   totalItems: number;
+  /** 0–3, from the round's accuracy (common/stars.ts). */
+  stars: number;
   endedAt: Date | null;
 }

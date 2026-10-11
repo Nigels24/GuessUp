@@ -415,10 +415,20 @@ describe('Gameplay (e2e)', () => {
               roundsPlayed: 1,
               accuracy: (roundA.correct / ROUND_SIZE) * 100,
               bestScore: roundA.total,
+              // An Easy round with 3 of 5 correct (60 %): 2 stars.
+              bestStars: { EASY: 2, AVERAGE: null, DIFFICULT: null },
             }
-          : { categoryId: expect.any(String), name: expect.any(String), roundsPlayed: 0, accuracy: 0, bestScore: 0 },
+          : {
+              categoryId: expect.any(String),
+              name: expect.any(String),
+              roundsPlayed: 0,
+              accuracy: 0,
+              bestScore: 0,
+              bestStars: { EASY: null, AVERAGE: null, DIFFICULT: null },
+            },
       );
     }
+    expect(res.body.certificates).toEqual([]);
 
     // Student B only has abandoned rounds (one with an answered item): nothing counts.
     const answeredB = await prisma.answer.count({ where: { session: { user: { email: emails[1] } } } });

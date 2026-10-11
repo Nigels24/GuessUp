@@ -101,6 +101,48 @@ export function Bounce({ children, style }: { children: React.ReactNode; style?:
   return <Animated.View style={[style, { transform: [{ scale }] }]}>{children}</Animated.View>;
 }
 
+/** A star popping in: grows from 30 % past full size (125 %) and settles, once, after `delay`. */
+export function StarPop({
+  children,
+  delay = 0,
+  style,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  style?: StyleProp<ViewStyle>;
+}) {
+  const reduce = useReduceMotion();
+  const t = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (reduce) {
+      t.setValue(1);
+      return;
+    }
+    const anim = Animated.timing(t, {
+      toValue: 1,
+      duration: 380,
+      delay,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    });
+    anim.start();
+    return () => anim.stop();
+  }, [t, reduce, delay]);
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          opacity: t.interpolate({ inputRange: [0, 0.3, 1], outputRange: [0, 1, 1] }),
+          transform: [{ scale: t.interpolate({ inputRange: [0, 0.6, 1], outputRange: [0.3, 1.25, 1] }) }],
+        },
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
 /** The prototype's timer pulse: grows to 112 % and back while `active`. */
 export function Pulse({
   active,

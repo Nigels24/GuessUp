@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module.js';
+import { AdminCertificatesController } from './admin-certificates.controller.js';
+import { AdminCertificatesService } from './admin-certificates.service.js';
 import { AdminCategoriesController } from './admin-categories.controller.js';
 import { AdminCategoriesService } from './admin-categories.service.js';
 import { AdminDashboardService } from './admin-dashboard.service.js';
@@ -26,6 +28,7 @@ import { AdminUploadsController } from './admin-uploads.controller.js';
     AdminStudentsController,
     AdminSessionsController,
     AdminReportsController,
+    AdminCertificatesController,
   ],
   providers: [
     AdminCategoriesService,
@@ -34,6 +37,7 @@ import { AdminUploadsController } from './admin-uploads.controller.js';
     AdminSessionsService,
     AdminReportsService,
     AdminDashboardService,
+    AdminCertificatesService,
   ],
 })
 export class AdminModule {}

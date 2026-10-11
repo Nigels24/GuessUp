@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { LEVELS, SESSION_STATUS, type Difficulty, type SessionStatus } from "@/lib/game";
-import { initials } from "@/lib/format";
+import { initials, printedAt } from "@/lib/format";
 import type { CategoryRef } from "@/lib/types";
 
 /* ---------- pills (the prototype's catPill, levelPill, accPill) ---------- */
@@ -29,9 +29,65 @@ export function AccPill({ value }: { value: number }) {
   return <span className={`pill ${value >= 75 ? "pill-ok" : value >= 50 ? "pill-warn" : "pill-bad"}`}>{value}%</span>;
 }
 
+/** A round's stars (0–3): ★ filled gold, empty gray. null (abandoned or unfinished) shows "—". */
+export function Stars({ value, className = "" }: { value: number | null | undefined; className?: string }) {
+  if (value === null || value === undefined) return <span className="muted">—</span>;
+  const n = Math.max(0, Math.min(3, value));
+  return (
+    <span className={`stars ${className}`.trim()} title={`${n} of 3 stars`} aria-label={`${n} of 3 stars`}>
+      {[0, 1, 2].map((i) => (
+        <i key={i} className={i < n ? "on" : undefined} aria-hidden>
+          ★
+        </i>
+      ))}
+    </span>
+  );
+}
+
 export function StatusPill({ status }: { status: SessionStatus }) {
   const s = SESSION_STATUS[status];
   return <span className={`pill ${s.pill}`}>{s.label}</span>;
+}
+
+/* ---------- printing ---------- */
+
+const SCHOOL = "J.H. Cerilles State College – Dumingag Campus";
+
+/**
+ * The heading of a printout (hidden on screen): school, report title, the
+ * filters used and when it was printed. Put it just before the page's
+ * .page-head, which it replaces on paper. `landscape` prints this page on
+ * A4 landscape (wide tables); other pages stay portrait.
+ */
+export function PrintHeader({
+  title,
+  details,
+  landscape = false,
+}: {
+  title: string;
+  /** Date range and filters; empty entries are left out. */
+  details: (string | null | undefined | false)[];
+  landscape?: boolean;
+}) {
+  const [printed, setPrinted] = useState(() => new Date());
+  useEffect(() => {
+    const update = () => setPrinted(new Date());
+    window.addEventListener("beforeprint", update);
+    return () => window.removeEventListener("beforeprint", update);
+  }, []);
+  return (
+    <>
+      {landscape && <style>{"@media print { @page { size: A4 landscape; margin: 10mm; } }"}</style>}
+      <div className="print-head" aria-hidden>
+        <p className="print-org">
+          <b>GuessUp</b> · Administrator Panel · {SCHOOL}
+        </p>
+        <h2>{title}</h2>
+        <p>{details.filter(Boolean).join(" · ")}</p>
+        <p className="print-date">Printed {printedAt(printed)}</p>
+      </div>
+    </>
+  );
 }
 
 /* ---------- small building blocks ---------- */
@@ -155,7 +211,7 @@ export function Pager({
       <span className="muted small">
         Showing {first}–{last} of {total} {noun} · page {page} of {pages}
       </span>
-      <div className="flex gap-2">
+      <div className="no-print flex gap-2">
         <button className="btn btn-ghost btn-sm" disabled={page <= 1} onClick={() => onPage(page - 1)}>
           ← Prev
         </button>

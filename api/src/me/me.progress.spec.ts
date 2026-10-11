@@ -102,6 +102,7 @@ describe('buildProgress', () => {
         accuracy: 60,
         correctCount: 3,
         totalItems: 5,
+        stars: 2,
         endedAt: new Date('2026-10-01T10:00:00Z'),
       },
     ];
