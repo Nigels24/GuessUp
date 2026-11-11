@@ -26,10 +26,12 @@ npm run start:dev                     # http://localhost:3000/api/health
 npm run lint                          # oxlint src/ test/
 npm test                              # vitest unit tests (**/*.spec.ts)
 npx vitest run src/game/game.logic.spec.ts   # single file; add -t "<name>" for one test
-npm run test:e2e                      # **/*.e2e-spec.ts against the real DB in api/.env (needs seed + JWT_SECRET)
+npm run test:e2e                      # **/*.e2e-spec.ts against the real DB in api/.env (needs seed + JWT_SECRET); files run serially because timer assertions break under parallel load
 npm run prisma:seed                   # idempotent upsert
 npx prisma migrate dev --name <change>   # after editing schema.prisma; commit the migration folder
 npm run prisma:reset                  # DROPS DATA. Never run it against the Neon DB in api/.env
+npm run demo:seed [-- --apply]        # defense demo data (~25 students); dry run without --apply. demo:remove undoes it.
+                                      # Touches only accounts on @demo.jhcsc.edu.ph and their rows
 
 # admin/
 npm run dev | npm run build | npm run lint
@@ -37,6 +39,7 @@ npm run dev | npm run build | npm run lint
 # mobile/
 npx expo start
 npm run typecheck
+npm test                              # node --test src/lib/*.test.mjs (pure helpers; the .mjs tests import the .ts files)
 npm run build:apk
 ```
 
@@ -53,13 +56,15 @@ npm run build:apk
   - Stars (`common/stars.ts`, 0–3 from round accuracy; null for unfinished rounds) and category completion certificates (`common/certificates.ts`: Easy, Average and Difficult each passed with a finished round of 2+ stars, `PASSING_STARS`, in one category) are derived from finished rounds and never stored. `/finish` returns `certificate` when that round completed the set; `/me/summary` lists them; admins read them at `/api/admin/certificates`.
   - Finishing a round updates `LeaderboardEntry` and awards badges in the same transaction. `LeaderboardService.categoryRanking` computes ranks; `GET /leaderboard/:categoryId` returns the top 50 plus the caller's row.
   - `me/me.summary.ts` and `me/me.progress.ts` are the pure builders behind `/me/summary` and `/me/progress` (unit-tested). `PATCH /me` and `POST /me/password` are the profile endpoints; a wrong current password is a 400 because both clients sign out on 401.
+- Cloudinary (`cloudinary/`, `common/cloudinary-folders.ts`): the account is shared with another system, so every upload goes under `guessup/<folder>` and the service deletes only inside the folder it is given (`questions`, `avatars`). Add new folders there. Student avatars (`POST/DELETE /api/me/avatar`) expose `avatarUrl` only, never the public id.
+- Throttle counters live in API memory: they reset on restart and are not shared across instances.
 - Prisma: the migrations in `prisma/migrations/` are the only source of truth for the schema. Deploy uses `prisma migrate deploy`. The `student_badges` table is in the schema but not in the thesis ERD.
 - Seed (`prisma/seed.ts`, `prisma/seed-data/`): it upserts questions on a stable `seedKey` (`<category>-<difficulty>-<nn>`). It aborts unless the 7 seeded categories and 105 seeded questions exist, with 5 per category × difficulty (rows added in the admin panel are not counted). It does not touch `isActive` of existing items. Picture-question images are SVGs in `api/public/images/`; uploaded ones are on Cloudinary (`imagePublicId` set).
 
 ### Clients
 - Both clients use a 60 s request timeout because the Render free tier takes about 50 s to wake. Both turn Nest's `message`, which can be a string or an array of validation messages, into user-facing text. A 401 on a request that carried a token signs the user out.
-- **admin**: `src/lib/api.ts` (`apiFetch`, `apiDownload` for CSV, FormData for uploads) uses the base URL from `NEXT_PUBLIC_API_URL` and keeps the token in localStorage. Panel pages live under the `(panel)` route group behind `AdminShell` and `FeedbackProvider` (`components/ui.tsx`: modal, confirm, toast, pills). They call the API's `/api/admin/...` routes (`api/src/admin`); per-type question rules are in `admin/question.rules.ts`, report counting in `admin/reports.logic.ts` (both pure, unit-tested).
-- **mobile**: `src/lib/api.ts` reads the API base URL **at runtime from AsyncStorage**, set on `app/settings-api.tsx`, so one APK can target the emulator (`http://10.0.2.2:3000/api`), a LAN laptop, or Render. The JWT is stored in `expo-secure-store`. Routes are grouped as `(auth)` and `(app)`. Seeded images are SVG, which RN `Image` cannot render, so they need `react-native-svg`.
+- **admin**: `src/lib/api.ts` (`apiFetch`, `apiDownload` for CSV, FormData for uploads) uses the base URL from `NEXT_PUBLIC_API_URL` and keeps the token in localStorage. Panel pages live under the `(panel)` route group behind `AdminShell` and `FeedbackProvider` (`components/ui.tsx`: modal, confirm, toast, pills). They call the API's `/api/admin/...` routes (`api/src/admin`); per-type question rules are in `api/src/admin/question.rules.ts`, report counting in `api/src/admin/reports.logic.ts` (both pure, unit-tested).
+- **mobile**: `src/lib/api.ts` reads the API base URL **at runtime from AsyncStorage**, set on `app/settings-api.tsx`, so one APK can target the emulator (`http://10.0.2.2:3000/api`), a LAN laptop, or Render. With nothing saved it falls back to `EXPO_PUBLIC_API_URL` (set to the Render URL in `eas.json` preview/production profiles), then the emulator address. The JWT is stored in `expo-secure-store`. Routes are grouped as `(auth)` and `(app)`. Seeded images are SVG, which RN `Image` cannot render, so they need `react-native-svg`.
 
 ## Accounts
 - No credentials in the repo. The seed creates the admin and the demo student only from `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` and `SEED_STUDENT_EMAIL`/`SEED_STUDENT_PASSWORD`, and never changes an existing account's password. Admins change their own name/password in the panel (`/account`, via `PATCH /api/me` and `POST /api/me/password`, which serve both roles; admin rules in `me/me.rules.ts`). `npm run admin:set-password` (env `ADMIN_EMAIL`, `NEW_ADMIN_PASSWORD`) is only for recovering a forgotten admin password.

@@ -1,8 +1,10 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { LEVELS, SESSION_STATUS, type Difficulty, type SessionStatus } from "@/lib/game";
 import { initials, printedAt } from "@/lib/format";
+import { DEPARTMENT, LOGO_DEPARTMENT, LOGO_SCHOOL, SCHOOL } from "@/lib/logos";
 import type { CategoryRef } from "@/lib/types";
 
 /* ---------- pills (the prototype's catPill, levelPill, accPill) ---------- */
@@ -51,23 +53,24 @@ export function StatusPill({ status }: { status: SessionStatus }) {
 
 /* ---------- printing ---------- */
 
-const SCHOOL = "J.H. Cerilles State College – Dumingag Campus";
-
 /**
  * The heading of a printout (hidden on screen): school, report title, the
  * filters used and when it was printed. Put it just before the page's
  * .page-head, which it replaces on paper. `landscape` prints this page on
- * A4 landscape (wide tables); other pages stay portrait.
+ * A4 landscape (wide tables); other pages stay portrait. `logos` adds the
+ * college and School of Computing Studies seals for official records.
  */
 export function PrintHeader({
   title,
   details,
   landscape = false,
+  logos = false,
 }: {
   title: string;
   /** Date range and filters; empty entries are left out. */
   details: (string | null | undefined | false)[];
   landscape?: boolean;
+  logos?: boolean;
 }) {
   const [printed, setPrinted] = useState(() => new Date());
   useEffect(() => {
@@ -78,15 +81,83 @@ export function PrintHeader({
   return (
     <>
       {landscape && <style>{"@media print { @page { size: A4 landscape; margin: 10mm; } }"}</style>}
-      <div className="print-head" aria-hidden>
-        <p className="print-org">
-          <b>GuessUp</b> · Administrator Panel · {SCHOOL}
-        </p>
-        <h2>{title}</h2>
-        <p>{details.filter(Boolean).join(" · ")}</p>
-        <p className="print-date">Printed {printedAt(printed)}</p>
+      <div className={`print-head${logos ? " print-head-logos" : ""}`} aria-hidden>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {logos && <img className="print-logo" src={LOGO_SCHOOL} alt="J.H. Cerilles State College seal" />}
+        <div>
+          <p className="print-org">
+            {logos ? (
+              <>
+                {SCHOOL} · {DEPARTMENT}
+              </>
+            ) : (
+              <>
+                <b>GuessUp</b> · Administrator Panel · {SCHOOL}
+              </>
+            )}
+          </p>
+          <h2>{title}</h2>
+          <p>{details.filter(Boolean).join(" · ")}</p>
+          <p className="print-date">Printed {printedAt(printed)}</p>
+        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {logos && <img className="print-logo" src={LOGO_DEPARTMENT} alt="School of Computing Studies seal" />}
       </div>
     </>
+  );
+}
+
+/**
+ * Prints `children` on their own: they are rendered at the end of <body>, the
+ * rest of the page (panel, open dialog) is hidden on paper, and the print
+ * dialog opens once the images have loaded. `onDone` runs when it closes.
+ * Used for printouts that are not the page on screen (all filtered sessions,
+ * one session from its dialog).
+ */
+export function PrintSheet({
+  orientation = "portrait",
+  onDone,
+  children,
+}: {
+  orientation?: "portrait" | "landscape";
+  onDone: () => void;
+  children: ReactNode;
+}) {
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
+
+  useEffect(() => {
+    const el = document.createElement("div");
+    el.className = "print-sheet";
+    document.body.appendChild(el);
+    setHost(el);
+    return () => el.remove();
+  }, []);
+
+  useEffect(() => {
+    if (!host) return;
+    let cancelled = false;
+    const done = () => onDoneRef.current();
+    window.addEventListener("afterprint", done, { once: true });
+    const images = Array.from(host.querySelectorAll("img"), (img) => img.decode().catch(() => undefined));
+    void Promise.all(images).then(() => {
+      if (!cancelled) window.print();
+    });
+    return () => {
+      cancelled = true;
+      window.removeEventListener("afterprint", done);
+    };
+  }, [host]);
+
+  if (!host) return null;
+  return createPortal(
+    <>
+      {/* After the page's own @page rule in the document, so this one applies. */}
+      <style>{`@media print { @page { size: A4 ${orientation}; margin: ${orientation === "landscape" ? "10mm" : "12mm"}; } }`}</style>
+      {children}
+    </>,
+    host,
   );
 }
 

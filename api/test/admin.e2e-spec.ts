@@ -101,6 +101,7 @@ describe('Admin Panel API (e2e)', () => {
       ['post', '/api/admin/uploads/image'],
       ['get', '/api/admin/students'],
       ['get', '/api/admin/sessions'],
+      ['get', '/api/admin/sessions?format=csv'],
       ['get', '/api/admin/reports/activity'],
       ['get', '/api/admin/reports/scores'],
       ['get', '/api/admin/reports/most-missed'],
@@ -514,6 +515,40 @@ describe('Admin Panel API (e2e)', () => {
       } finally {
         await prisma.gameSession.deleteMany({ where: { id: { in: [stale.id, fresh.id, recent.id] } } });
       }
+    });
+
+    it('downloads the filtered sessions and one session as CSV', async () => {
+      const list = await request(http)
+        .get('/api/admin/sessions')
+        .query({ studentId, status: 'COMPLETED', format: 'csv', page: 2, pageSize: 1 })
+        .set(auth(adminToken))
+        .expect(200);
+      expect(list.headers['content-type']).toMatch(/^text\/csv; charset=utf-8/);
+      expect(list.headers['content-disposition']).toMatch(/^attachment; filename="guessup_sessions_start_to_\d{4}-\d{2}-\d{2}\.csv"$/);
+      expect(list.text.startsWith('\uFEFF')).toBe(true);
+      const rows = list.text.slice(1).trimEnd().split('\r\n');
+      // Paging is ignored: the header and the student's one completed round.
+      expect(rows).toHaveLength(2);
+      expect(rows[0]).toBe('Student,Email,Category,Difficulty,Status,Points,Correct,Total items,Started at,Finished at');
+      expect(rows[1]).toMatch(new RegExp(`^e2e-admin-student,${studentEmail},e2e-solo-${stamp},Easy,Completed,0,0,`));
+
+      const json = await request(http).get('/api/admin/sessions').query({ studentId, status: 'COMPLETED' }).set(auth(adminToken)).expect(200);
+      const one = await request(http)
+        .get(`/api/admin/sessions/${json.body.items[0].id}`)
+        .query({ format: 'csv' })
+        .set(auth(adminToken))
+        .expect(200);
+      expect(one.headers['content-disposition']).toMatch(/filename="guessup_session_\d{4}-\d{2}-\d{2}_e2e-admin-student\.csv"/);
+      const lines = one.text.slice(1).trimEnd().split('\r\n');
+      expect(lines[0]).toBe('Student,e2e-admin-student');
+      expect(lines).toContain('#,Question,Student answer,Correct answer,Result,Points,Time taken (s),Hint used');
+      expect(lines.at(-1)).toMatch(new RegExp(`^1,e2e-question-${stamp},Wrong A,Right,Wrong,0,\\d+,No$`));
+    });
+
+    it('refuses an unknown format, and a CSV of an unknown session is 404', async () => {
+      await request(http).get('/api/admin/sessions').query({ format: 'xml' }).set(auth(adminToken)).expect(400);
+      await request(http).get('/api/admin/sessions/nope').query({ format: 'csv' }).set(auth(adminToken)).expect(404);
+      await request(http).get('/api/admin/sessions/nope').query({ extra: '1' }).set(auth(adminToken)).expect(400);
     });
 
     it('validates the date filter', async () => {

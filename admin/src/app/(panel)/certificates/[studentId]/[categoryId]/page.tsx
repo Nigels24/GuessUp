@@ -7,10 +7,10 @@ import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { longDate } from "@/lib/format";
 import { LEVELS } from "@/lib/game";
+import { DEPARTMENT, LOGO_DEPARTMENT, LOGO_SCHOOL, SCHOOL } from "@/lib/logos";
 import type { CertificateDetail } from "@/lib/types";
 import { useLoad } from "@/lib/use-load";
 
-const SCHOOL = "J.H. Cerilles State College – Dumingag Campus";
 const DEFAULT_TITLE = "Administrator";
 /** The last "Prepared by" values typed in this browser, per administrator. */
 const PREPARED_BY_KEY = "guessup.cert.preparedBy";
@@ -134,8 +134,16 @@ export default function CertificatePage({ params }: { params: { studentId: strin
           <article className="cert">
             <div className="cert-frame">
               <div className="cert-top">
-                <p className="cert-school">{SCHOOL}</p>
-                <p className="cert-program">Bachelor of Science in Information Technology</p>
+                {/* Plain <img>, loaded eagerly, so both seals are ready when Print opens. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="cert-logo" src={LOGO_SCHOOL} alt="J.H. Cerilles State College seal" loading="eager" />
+                <div className="cert-top-text">
+                  <p className="cert-school">{SCHOOL}</p>
+                  <p className="cert-dept">{DEPARTMENT}</p>
+                  <p className="cert-program">Bachelor of Science in Information Technology</p>
+                </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className="cert-logo" src={LOGO_DEPARTMENT} alt="School of Computing Studies seal" loading="eager" />
               </div>
 
               <h1 className="cert-title">Certificate of Completion</h1>

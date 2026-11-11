@@ -34,4 +34,16 @@ export class SessionListQueryDto extends DateRangeQueryDto {
   @IsOptional()
   @IsIn(SESSION_STATUSES)
   status?: SessionStatusKey;
+
+  /** csv: every matching session (page and pageSize are ignored) as a download. */
+  @IsOptional()
+  @IsIn(['json', 'csv'])
+  format?: 'json' | 'csv';
+}
+
+/** GET /api/admin/sessions/:id?format=csv */
+export class SessionDetailQueryDto {
+  @IsOptional()
+  @IsIn(['json', 'csv'])
+  format?: 'json' | 'csv';
 }

@@ -4,15 +4,8 @@ import { Roles } from '../auth/roles.decorator.js';
 import { AdminDashboardService, type DashboardSummary } from './admin-dashboard.service.js';
 import { AdminReportsService } from './admin-reports.service.js';
 import { MostMissedQueryDto, ReportQueryDto } from './dto/report.dto.js';
-import { activityCsv, csvFilename, mostMissedCsv, scoresCsv } from './reports.csv.js';
+import { activityCsv, csvFilename, mostMissedCsv, scoresCsv, sendCsv as csv } from './reports.csv.js';
 import type { ActivityReport, MostMissedReport, ScoresReport } from './reports.logic.js';
-
-/** Sends `body` as a CSV download instead of JSON. */
-function csv(res: Response, filename: string, body: string): string {
-  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-  return body;
-}
 
 /**
  * Admin Panel > Reports and the Dashboard. Every report takes

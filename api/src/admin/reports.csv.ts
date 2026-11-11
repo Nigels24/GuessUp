@@ -3,6 +3,7 @@
  * unit tested. The files open correctly in Excel: UTF-8 with a byte order
  * mark, CRLF line endings, RFC 4180 quoting.
  */
+import type { Response } from 'express';
 import {
   LEVEL_LABELS,
   dayKey,
@@ -29,6 +30,13 @@ export function csvCell(value: Cell): string {
 
 export function toCsv(rows: readonly (readonly Cell[])[]): string {
   return BOM + rows.map((row) => row.map(csvCell).join(',')).join('\r\n') + '\r\n';
+}
+
+/** Sends `body` as a CSV download instead of JSON (the controller returns what this returns). */
+export function sendCsv(res: Response, filename: string, body: string): string {
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  return body;
 }
 
 /** A date as YYYY-MM-DD in Philippine time, for spreadsheets. */

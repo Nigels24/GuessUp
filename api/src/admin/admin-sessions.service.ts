@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { roundStars } from '../common/stars.js';
 import { CATEGORY_REF } from '../game/game.service.js';
@@ -9,6 +9,8 @@ import { reportRange } from './reports.logic.js';
 import { displayStatus, statusFilterWhere } from './session-status.js';
 
 export const SESSIONS_PAGE_SIZE = 20;
+/** The most sessions one CSV export returns; above it the administrator narrows the filters. */
+export const SESSIONS_EXPORT_MAX = 5000;
 
 const SESSION_INCLUDE = {
   user: { select: { id: true, fullName: true, email: true, yearLevel: true, avatarUrl: true } },
@@ -83,6 +85,39 @@ export class AdminSessionsService {
 
   /** Newest first. Dates filter on when the round started (Philippine calendar days). */
   async list(query: SessionListQueryDto, now = new Date()): Promise<Page<AdminSessionRow>> {
+    const where = this.listWhere(query, now);
+    const { page, pageSize, skip, take } = pageOf(query, SESSIONS_PAGE_SIZE);
+    const [total, rows] = await Promise.all([
+      this.prisma.gameSession.count({ where }),
+      this.prisma.gameSession.findMany({
+        where,
+        include: SESSION_INCLUDE,
+        orderBy: [{ startedAt: 'desc' }, { id: 'asc' }],
+        skip,
+        take,
+      }),
+    ]);
+    return { items: rows.map((row) => toRow(row, now)), total, page, pageSize };
+  }
+
+  /** Every session matching the list's filters (no paging), for the CSV export. */
+  async exportRows(query: SessionListQueryDto, now = new Date()): Promise<AdminSessionRow[]> {
+    const where = this.listWhere(query, now);
+    const total = await this.prisma.gameSession.count({ where });
+    if (total > SESSIONS_EXPORT_MAX) {
+      throw new BadRequestException(
+        `${total} sessions match these filters; one download holds at most ${SESSIONS_EXPORT_MAX}. Choose a shorter period or more filters.`,
+      );
+    }
+    const rows = await this.prisma.gameSession.findMany({
+      where,
+      include: SESSION_INCLUDE,
+      orderBy: [{ startedAt: 'desc' }, { id: 'asc' }],
+    });
+    return rows.map((row) => toRow(row, now));
+  }
+
+  private listWhere(query: SessionListQueryDto, now: Date): Prisma.GameSessionWhereInput {
     const search = query.search?.trim();
     let startedAt: Prisma.DateTimeFilter | undefined;
     if (query.from || query.to) {
@@ -109,18 +144,7 @@ export class AdminSessionsService {
     };
     const statusWhere = statusFilterWhere(query.status, now);
     if (statusWhere) where.AND = [statusWhere];
-    const { page, pageSize, skip, take } = pageOf(query, SESSIONS_PAGE_SIZE);
-    const [total, rows] = await Promise.all([
-      this.prisma.gameSession.count({ where }),
-      this.prisma.gameSession.findMany({
-        where,
-        include: SESSION_INCLUDE,
-        orderBy: [{ startedAt: 'desc' }, { id: 'asc' }],
-        skip,
-        take,
-      }),
-    ]);
-    return { items: rows.map((row) => toRow(row, now)), total, page, pageSize };
+    return where;
   }
 
   /** One session with every submitted answer (the prototype's "Session answers"). */

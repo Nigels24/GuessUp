@@ -139,6 +139,11 @@
   .tbl td { @apply border-b border-line px-3.5 py-[11px] align-middle; }
   .tbl tr:last-child td { @apply border-b-0; }
   .tbl tbody tr:hover { @apply bg-[#FBFAFF]; }
+  /* A row that opens a dialog (Game Sessions), and one that does not. */
+  .tbl tbody tr.row-link { cursor: pointer; }
+  .tbl tbody tr.row-link:hover { @apply bg-[#F6F4FF]; }
+  .tbl tbody tr.row-link:focus-visible { outline: 2px solid var(--brand); outline-offset: -2px; background: #f6f4ff; }
+  .tbl tbody tr.row-static:hover { background: transparent; }
   .tbl .q-cell { max-width: 320px; }
   .tbl .q-cell b { @apply block overflow-hidden text-ellipsis whitespace-nowrap font-bold; }
   /* Fixed column widths (set with <colgroup>): cells truncate instead of pushing the table wider. */
@@ -252,6 +257,13 @@
 
 /* Printout heading (ui.tsx PrintHeader): only on paper. */
 .print-head { display: none; }
+/* A printout rendered on its own (ui.tsx PrintSheet): only on paper, and then alone. */
+.print-sheet { display: none; }
+
+/* One session's record (Game Sessions > Answers > Print). */
+.print-record { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px 14px; margin-bottom: 12px; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 11px; }
+.print-record dt { color: var(--muted); font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.04em; }
+.print-record dd { margin: 0; font-weight: 700; overflow-wrap: anywhere; }
 
 @media print {
   @page { size: A4 portrait; margin: 12mm; }
@@ -266,6 +278,13 @@
   .print-head p { font-size: 11px; color: var(--ink-2); }
   .print-head .print-org { color: var(--muted); }
   .print-head .print-date { color: var(--muted); }
+  /* With the seals: college seal | heading | department seal. */
+  .print-head.print-head-logos { display: grid; grid-template-columns: 18mm minmax(0, 1fr) 18mm; align-items: center; gap: 4mm; text-align: center; }
+  .print-logo { width: 18mm; height: 18mm; object-fit: contain; }
+
+  /* While a PrintSheet is open, it is the only thing printed. */
+  body:has(> .print-sheet) > :not(.print-sheet) { display: none !important; }
+  .print-sheet { display: block; }
   /* The printout heading replaces the on-screen title and filters. */
   .print-head + .page-head { display: none; }
 
@@ -295,6 +314,8 @@
   .tbl .avatar { display: none; }
   /* Row buttons (View, Answers, Deactivate…) do not print, nor their column. */
   .tbl .actions { display: none !important; }
+  /* No screen hover or focus marks on paper. */
+  .tbl tbody tr.row-link, .tbl tbody tr.row-link:hover, .tbl tbody tr.row-link:focus-visible { background: transparent; outline: none; cursor: auto; }
   .stars { font-size: 12px; }
 
   /* The header row repeats on each page; a row is never split across pages. */
@@ -334,7 +355,24 @@
   outline-offset: -1.3cqw;
   padding: 3.6cqw 6cqw 3cqw;
 }
+/* Header: school seal | centred text | department seal. The seals are sized in
+   cqw, so they scale with the sheet (about 84 px at full width) and print the same. */
+.cert-top {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 7.5cqw minmax(0, 1fr) 7.5cqw;
+  align-items: center;
+  gap: 2cqw;
+}
+.cert-logo {
+  width: 7.5cqw;
+  height: 7.5cqw;
+  object-fit: contain;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
 .cert-school { font-family: var(--font-fredoka), sans-serif; font-weight: 600; font-size: 2.1cqw; letter-spacing: 0.02em; }
+.cert-dept { font-size: 1.45cqw; color: var(--ink-2); font-weight: 700; letter-spacing: 0.02em; margin-top: 0.2cqw; }
 .cert-program { font-size: 1.35cqw; color: var(--muted); font-weight: 700; margin-top: 0.3cqw; }
 .cert-title {
   font-family: var(--font-fredoka), sans-serif;

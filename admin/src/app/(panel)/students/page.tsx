@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AccPill, Avatar, Bars, Empty, LoadError, Modal, Pager, PrintHeader, WideRow, useFeedback } from "@/components/ui";
-import { apiFetch } from "@/lib/api";
+import { apiDownload, apiFetch } from "@/lib/api";
 import { ago, date, num, qs } from "@/lib/format";
 import { YEAR_LEVELS } from "@/lib/game";
 import type { Page, StudentDetail, StudentRow } from "@/lib/types";
@@ -168,6 +168,21 @@ export default function StudentsPage() {
 /** The prototype's student detail dialog. */
 function StudentView({ id, onClose }: { id: string; onClose: () => void }) {
   const { data: u, error, reload } = useLoad(() => apiFetch<StudentDetail>(`/admin/students/${id}`), [id]);
+  const [downloading, setDownloading] = useState(false);
+  const { toast } = useFeedback();
+
+  /** All of this student's sessions (every period), same columns as Game Sessions' CSV. */
+  async function downloadCsv() {
+    setDownloading(true);
+    try {
+      await apiDownload(`/admin/sessions${qs({ studentId: id, format: "csv" })}`, "guessup_sessions.csv");
+    } catch (err) {
+      toast(err instanceof Error ? err.message : "Could not download the file.", "error");
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   return (
     <Modal
       title={u?.fullName ?? "Student"}
@@ -178,6 +193,9 @@ function StudentView({ id, onClose }: { id: string; onClose: () => void }) {
           <Link className="btn btn-ghost" href={`/sessions?student=${id}`}>
             Game sessions
           </Link>
+          <button className="btn btn-ghost" onClick={() => void downloadCsv()} disabled={downloading}>
+            {downloading ? "Preparing…" : "⬇ Download CSV"}
+          </button>
           <button className="btn btn-primary" onClick={onClose}>
             Close
           </button>
